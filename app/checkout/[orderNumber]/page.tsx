@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -497,7 +498,7 @@ export default function CheckoutPage() {
           <div className="rounded-xl border border-red-400/40 bg-red-400/10 p-6 text-center">
             <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
             <p className="text-red-300">{error}</p>
-            <a href="/" className="inline-block mt-4 btn-primary">ត្រឡប់ទៅកាន់ទំព័រដើម</a>
+            <Link href="/" className="inline-block mt-4 btn-primary">ត្រឡប់ទៅកាន់ទំព័រដើម</Link>
           </div>
         )}
 
@@ -515,12 +516,12 @@ export default function CheckoutPage() {
                   Order <span className="font-mono text-pink-800">{order.orderNumber}</span>
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-                  <a href="/" className="inline-flex items-center justify-center rounded-xl border border-pink-400 px-6 py-3 text-sm font-semibold text-pink-600">
+                  <Link href="/" className="inline-flex items-center justify-center rounded-xl border border-pink-400 px-6 py-3 text-sm font-semibold text-pink-600">
                     Back to Home
-                  </a>
-                  <a href={`/order?number=${order.orderNumber}`} className="inline-flex items-center justify-center rounded-xl bg-pink-600 px-6 py-3 text-sm font-semibold text-white">
+                  </Link>
+                  <Link href={`/order?number=${order.orderNumber}`} className="inline-flex items-center justify-center rounded-xl bg-pink-600 px-6 py-3 text-sm font-semibold text-white">
                     Track Order
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}
@@ -531,7 +532,7 @@ export default function CheckoutPage() {
                 <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
                 <h1 className="font-display text-xl font-bold mb-2">ការទូទាត់បានផុតកំណត់</h1>
                 <p className="text-pink-500 text-sm mb-4">QR-Code នេះត្រូវបានផុតកំណត់</p>
-                <a href={`/games/${order.gameSlug}`} className="btn-primary">បញ្ជាទិញឡើងវិញ</a>
+                <Link href={`/games/${order.gameSlug}`} className="btn-primary">បញ្ជាទិញឡើងវិញ</Link>
               </div>
             )}
 
