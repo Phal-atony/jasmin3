@@ -8,6 +8,7 @@ const STATUSES = ["PENDING", "PAID", "PROCESSING", "DELIVERED", "FAILED", "REFUN
 
 export default function AdminOrderDetailPage() {
   const params = useParams() as { orderNumber: string };
+  const { orderNumber } = params;
   const router = useRouter();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
