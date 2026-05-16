@@ -2,16 +2,27 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
-const productSchema = z.object({
-  gameId: z.string().min(1),
-  name: z.string().min(1),
-  amount: z.number().int().min(0),
-  bonus: z.number().int().min(0).default(0),
-  priceUsd: z.number().positive(),
-  badge: z.string().optional().nullable(),
-  imageUrl: z.string().optional().nullable(),  // ← was "image"
-  active: z.boolean().default(true),
-  sortOrder: z.number().int().default(0),
-});
+export async function GET(req: NextRequest) {
+  const gameId = req.nextUrl.searchParams.get("gameId");
+  const products = await prisma.product.findMany({
+    where: {
+      active: true,
+      ...(gameId ? { gameId } : {}),
+    },
+    orderBy: [{ sortOrder: "asc" }],
+    select: {
+      id: true,
+      gameId: true,
+      name: true,
+      amount: true,
+      bonus: true,
+      priceUsd: true,
+      priceKhr: true,
+      badge: true,
+      imageUrl: true,
+      sortOrder: true,
+    },
+  });
+  return NextResponse.json(products);
+}
