@@ -18,8 +18,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ method: string }> }
 ) {
-  const { method } = await params;
-  const method = method.toUpperCase() as PaymentMethod;
+  const { method: methodParam } = await params;
+  const method = methodParam.toUpperCase() as PaymentMethod;
 
   if (method !== "KHPAY") {
     return NextResponse.json({ error: "Invalid method" }, { status: 400 });
