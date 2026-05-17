@@ -54,7 +54,8 @@ git push -u origin main
    | `ADMIN_EMAIL` | `admin@jasmintopup.com` |
    | `ADMIN_PASSWORD` | your admin password |
    | `NEXT_PUBLIC_BASE_URL` | leave blank for now |
-   | `PAYMENT_SIMULATION_MODE` | `true` |
+   | `PAYMENT_SIMULATION_MODE` | `true` for testing; `false` for real payments |
+   | `KHPAY_FALLBACK_TO_SIMULATION` | `false` (`true` only for preview/demo while fixing KHPay 401/403) |
    | `CLOUDINARY_CLOUD_NAME` | from Cloudinary dashboard |
    | `CLOUDINARY_API_KEY` | from Cloudinary dashboard |
    | `CLOUDINARY_API_SECRET` | from Cloudinary dashboard |
@@ -83,5 +84,5 @@ or upgrade to Render's $7/month plan.
 
 ## When you're ready for real payments
 
-Set `PAYMENT_SIMULATION_MODE=false` and fill in `KHPAY_API_KEY` + `KHPAY_WEBHOOK_SECRET`
-from your KHPay merchant dashboard → redeploy.
+Set `PAYMENT_SIMULATION_MODE=false`, `KHPAY_FALLBACK_TO_SIMULATION=false`, and fill in `KHPAY_API_KEY` + `KHPAY_WEBHOOK_SECRET`
+from your KHPay merchant dashboard → redeploy. If Vercel shows `KHPay: HTTP 403`, verify the API key/payment settings in KHPay first.

@@ -1,4 +1,4 @@
-﻿import crypto from "crypto";
+import crypto from "crypto";
 
 // KHPay supports a single unified KHQR code that is scannable by any
 // Cambodian bank app (ABA Pay, ACLEDA Pay, Wing, TrueMoney, Sathapana,
@@ -24,26 +24,99 @@ export interface PaymentInitResult {
   expiresAt: Date;
 }
 
-const KHPAY_BASE = process.env.KHPAY_BASE_URL || "https://khpay.site/api/v1";
-const KHPAY_KEY = process.env.KHPAY_API_KEY || "";
-const SIM_MODE = process.env.PAYMENT_SIMULATION_MODE === "true" || !KHPAY_KEY;
+function cleanEnv(value?: string): string {
+  return (value || "").trim().replace(/^['\"]|['\"]$/g, "");
+}
+
+function cleanBaseUrl(value?: string): string {
+  return cleanEnv(value).replace(/\/+$/, "");
+}
+
+const KHPAY_BASE = cleanBaseUrl(process.env.KHPAY_BASE_URL) || "https://khpay.site/api/v1";
+const KHPAY_KEY = cleanEnv(process.env.KHPAY_API_KEY);
+
+export function isPaymentSimulationMode(): boolean {
+  return cleanEnv(process.env.PAYMENT_SIMULATION_MODE).toLowerCase() === "true" || !KHPAY_KEY;
+}
+
+export function isPaymentSimulationAllowed(): boolean {
+  return (
+    isPaymentSimulationMode() ||
+    cleanEnv(process.env.KHPAY_FALLBACK_TO_SIMULATION).toLowerCase() === "true"
+  );
+}
 
 export async function initiatePayment(
   args: InitiatePaymentArgs
 ): Promise<PaymentInitResult> {
-  if (SIM_MODE) return simulatePayment(args);
-  if (args.method === "KHPAY") return initiateKhpay(args);
-  throw new Error(`Unsupported payment method: ${args.method}`);
+  if (isPaymentSimulationMode()) return simulatePayment(args);
+  if (args.method !== "KHPAY") throw new Error(`Unsupported payment method: ${args.method}`);
+
+  try {
+    return await initiateKhpay(args);
+  } catch (error) {
+    // Optional safety valve for preview/demo deployments only.
+    // Do NOT enable this for real production payments because it creates SIM-* orders.
+    if (cleanEnv(process.env.KHPAY_FALLBACK_TO_SIMULATION).toLowerCase() === "true") {
+      console.warn("[khpay] gateway failed; using simulation fallback:", error);
+      return simulatePayment(args);
+    }
+    throw error;
+  }
+}
+
+function getAppBaseUrl(): string {
+  const configured = cleanBaseUrl(process.env.NEXT_PUBLIC_BASE_URL || process.env.PUBLIC_APP_URL);
+  if (configured) return configured;
+
+  const vercelUrl = cleanBaseUrl(process.env.VERCEL_URL);
+  if (vercelUrl) return `https://${vercelUrl}`;
+
+  return "http://localhost:3000";
 }
 
 function simulatePayment(args: InitiatePaymentArgs): PaymentInitResult {
   const ref = `SIM-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const base = getAppBaseUrl();
   return {
     paymentRef: ref,
-    redirectUrl: `${base}/api/payment/simulate?order=${args.orderNumber}&ref=${ref}&method=${args.method}`,
+    redirectUrl: `${base}/api/payment/simulate?order=${encodeURIComponent(args.orderNumber)}&ref=${encodeURIComponent(ref)}&method=${encodeURIComponent(args.method)}`,
     expiresAt: new Date(Date.now() + 15 * 60 * 1000),
   };
+}
+
+async function readJsonOrText(res: Response): Promise<any> {
+  const text = await res.text().catch(() => "");
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text.slice(0, 300) };
+  }
+}
+
+function formatKhpayError(status: number, payload: any): string {
+  const remoteMessage = payload?.error || payload?.message || payload?.raw;
+
+  if (status === 401 || status === 403) {
+    return [
+      `HTTP ${status}`,
+      "KHPay refused this request.",
+      "Check KHPAY_API_KEY, KHPAY_BASE_URL, merchant account/payment settings, and whether this domain is allowed.",
+      "For testing only, set PAYMENT_SIMULATION_MODE=true in Vercel.",
+      remoteMessage ? `Remote: ${String(remoteMessage).slice(0, 180)}` : "",
+    ].filter(Boolean).join(" ");
+  }
+
+  if (status === 402) {
+    return [
+      "HTTP 402",
+      "KHPay says the PayWay link is not set. Add your PayWay link in the KHPay dashboard/settings.",
+      remoteMessage ? `Remote: ${String(remoteMessage).slice(0, 180)}` : "",
+    ].filter(Boolean).join(" ");
+  }
+
+  return remoteMessage || `HTTP ${status}`;
 }
 
 /**
@@ -53,9 +126,10 @@ function simulatePayment(args: InitiatePaymentArgs): PaymentInitResult {
  * Auth: Authorization: Bearer ak_xxx
  */
 async function initiateKhpay(args: InitiatePaymentArgs): Promise<PaymentInitResult> {
+  if (!KHPAY_KEY) return simulatePayment(args);
+
   // KHPay rejects private/internal URLs. Omit them entirely when they point
-  // at localhost — the docs confirm all three URLs are optional. Payment
-  // status is resolved via polling GET /qr/check/{id} instead.
+  // at localhost/private IPs. Payment status is resolved via polling too.
   const isPublicUrl = (u?: string) =>
     !!u &&
     /^https?:\/\//i.test(u) &&
@@ -64,13 +138,14 @@ async function initiateKhpay(args: InitiatePaymentArgs): Promise<PaymentInitResu
   const body: Record<string, unknown> = {
     amount: args.amountUsd.toFixed(2),
     currency: "USD",
-    note: args.note || `RITHTOPUP Order ${args.orderNumber}`,
+    note: args.note || `JASMINTOPUP Order ${args.orderNumber}`,
     metadata: {
       order_number: args.orderNumber,
       ...(args.customerEmail ? { email: args.customerEmail } : {}),
       ...(args.metadata || {}),
     },
   };
+
   if (isPublicUrl(args.returnUrl)) body.success_url = args.returnUrl;
   if (isPublicUrl(args.cancelUrl)) body.cancel_url = args.cancelUrl;
   if (isPublicUrl(args.callbackUrl)) body.callback_url = args.callbackUrl;
@@ -78,26 +153,24 @@ async function initiateKhpay(args: InitiatePaymentArgs): Promise<PaymentInitResu
   const res = await fetch(`${KHPAY_BASE}/qr/generate`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${KHPAY_KEY}`,
+      Authorization: `Bearer ${KHPAY_KEY}`,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify(body),
     cache: "no-store",
   });
 
-  const json = await res.json().catch(() => null);
+  const json = await readJsonOrText(res);
   if (!res.ok || !json?.success) {
-    const msg =
-      json?.error ||
-      json?.message ||
-      (json ? JSON.stringify(json).slice(0, 300) : `HTTP ${res.status}`);
-    throw new Error(`KHPay: ${msg}`);
+    throw new Error(`KHPay: ${formatKhpayError(res.status, json)}`);
   }
 
   const data = json.data;
   if (!data?.qr_string) {
     throw new Error("KHPay: response did not include qr_string");
   }
+
   return {
     paymentRef: data.transaction_id,
     redirectUrl: data.payment_url || `/checkout/${args.orderNumber}`,
@@ -115,16 +188,22 @@ export async function fetchKhpayStatus(transactionId: string): Promise<{
   amount?: string;
   currency?: string;
 } | null> {
-  if (SIM_MODE || !KHPAY_KEY) return null;
-  const res = await fetch(`${KHPAY_BASE}/qr/check/${transactionId}`, {
-    headers: { "Authorization": `Bearer ${KHPAY_KEY}` },
+  if (isPaymentSimulationMode() || !KHPAY_KEY || transactionId.startsWith("SIM-")) return null;
+
+  const res = await fetch(`${KHPAY_BASE}/qr/check/${encodeURIComponent(transactionId)}`, {
+    headers: {
+      Authorization: `Bearer ${KHPAY_KEY}`,
+      Accept: "application/json",
+    },
     cache: "no-store",
   });
-  const json = await res.json().catch(() => null);
+
+  const json = await readJsonOrText(res);
   if (!res.ok || !json?.success) {
     console.warn(`[khpay] check ${transactionId} failed:`, res.status, json);
     return null;
   }
+
   console.log(`[khpay] check ${transactionId}:`, JSON.stringify(json.data));
   return {
     status: String(json.data.status || "pending"),
@@ -143,11 +222,11 @@ export function verifyWebhook(
   rawBody: string,
   headers: Record<string, string>
 ): boolean {
-  if (SIM_MODE) return true;
+  if (isPaymentSimulationMode()) return true;
 
-  const secret = process.env.KHPAY_WEBHOOK_SECRET;
+  const secret = cleanEnv(process.env.KHPAY_WEBHOOK_SECRET);
   if (!secret) {
-    console.warn("[webhook] KHPAY_WEBHOOK_SECRET not set â€” rejecting.");
+    console.warn("[webhook] KHPAY_WEBHOOK_SECRET not set — rejecting.");
     return false;
   }
 
@@ -162,4 +241,3 @@ export function verifyWebhook(
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
-

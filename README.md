@@ -178,7 +178,8 @@ In **Vercel → Settings → Environment Variables**, add for **Production + Pre
 | `KHPAY_WEBHOOK_SECRET` | Generated in KHPay dashboard |
 | `NEXT_PUBLIC_BASE_URL` | `https://your-domain.vercel.app` (no trailing slash) |
 | `PUBLIC_APP_URL` | Same as `NEXT_PUBLIC_BASE_URL` |
-| `PAYMENT_SIMULATION_MODE` | `false` |
+| `PAYMENT_SIMULATION_MODE` | `false` for real payments, `true` for testing |
+| `KHPAY_FALLBACK_TO_SIMULATION` | `false`; use `true` only for preview/demo if KHPay blocks the request |
 | `TELEGRAM_BOT_TOKEN` | *(optional)* for new-order notifications |
 | `TELEGRAM_CHAT_ID` | *(optional)* chat or channel ID |
 
@@ -239,6 +240,7 @@ PUBLIC_APP_URL=""                         # same as NEXT_PUBLIC_BASE_URL in prod
 
 # Dev flag
 PAYMENT_SIMULATION_MODE="true"            # auto-completes payments after 3s
+KHPAY_FALLBACK_TO_SIMULATION="false"      # testing-only fallback when KHPay returns 401/403
 ```
 
 ---
@@ -288,6 +290,20 @@ middleware.ts              /admin/* + /api/admin/* auth gate
 <summary><b>Admin login returns 401 right after deploy</b></summary>
 
 Did you run the seed on the production database? Connect locally with your prod `DATABASE_URL` and run `npm run db:seed` once.
+</details>
+
+
+<details>
+<summary><b>KHPay returns HTTP 403 on Vercel</b></summary>
+
+This usually means the Vercel deployment is calling the real KHPay API, but KHPay refused the request. Check:
+
+- `KHPAY_API_KEY` is correct and has no extra spaces or quotes.
+- `KHPAY_BASE_URL` is `https://khpay.site/api/v1`.
+- Your KHPay merchant/payment settings are active.
+- `NEXT_PUBLIC_BASE_URL` and `PUBLIC_APP_URL` match your Vercel domain with HTTPS and no trailing slash.
+
+For testing only, set `PAYMENT_SIMULATION_MODE=true` in Vercel, or set `KHPAY_FALLBACK_TO_SIMULATION=true` to keep the checkout working while you fix the KHPay account/API key. Do not enable simulation fallback for real customer payments.
 </details>
 
 <details>

@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 import { generateOrderNumber, isValidUid, calcKhr } from "@/lib/utils";
@@ -141,11 +141,11 @@ export async function POST(req: NextRequest) {
     });
 
     // Initiate payment with the gateway
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")).replace(/\/+$/, "");
     // Prefer PUBLIC_APP_URL (tunnel/production domain) for gateway callbacks
     // so webhooks actually reach us. Falls back to baseUrl; the payment lib
     // strips localhost URLs automatically (the gateway refuses private IPs).
-    const publicUrl = process.env.PUBLIC_APP_URL || baseUrl;
+    const publicUrl = (process.env.PUBLIC_APP_URL || baseUrl).replace(/\/+$/, "");
     const init = await initiatePayment({
       orderNumber: order.orderNumber,
       amountUsd: order.amountUsd,
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       returnUrl: `${publicUrl}/order?number=${order.orderNumber}`,
       cancelUrl: `${publicUrl}/games/${game.slug}`,
       callbackUrl: `${publicUrl}/api/payment/webhook/khpay`,
-      note: `RITHTOPUP Â· ${game.name} Â· ${product.name}`,
+      note: `JASMINTOPUP · ${game.name} · ${product.name}`,
       customerEmail: data.customerEmail,
       metadata: {
         game_slug: game.slug,
