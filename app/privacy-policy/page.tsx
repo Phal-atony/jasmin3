@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import type { Metadata } from "next";
@@ -329,10 +330,10 @@ const sections = [
         </p>
         <div className="rounded-2xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-white p-5 space-y-3">
           {[
-            { icon: <img src="https://i.ibb.co/ycPxxz8h/IMG-20260515-100429.png" alt="" className="h-5 w-5 object-contain" />, label: "JASMINTOPUP" },
-            { icon: <img src="https://i.ibb.co/0px31m4Q/1000073671-removebg-preview.png" alt="" className="h-5 w-5 object-contain" />, label: <a href="https://jasmin2.onrender.com" className="text-pink-700 hover:underline font-medium">jasmin2.onrender.com</a> },
-            { icon: <img src="https://i.ibb.co/cSjgfRKB/IMG-20260515-113326.png" alt="" className="h-5 w-5 object-contain" />, label: <a href="mailto:jasmintopup@gmail.com" className="text-pink-700 hover:underline font-medium">jasmintopup@gmail.com</a> },
-            { icon: <img src="https://i.ibb.co/8Lx3whbn/1000073661-removebg-preview.png" alt="" className="h-5 w-5 object-contain" />, label: "ប្រទេសកម្ពុជា" },
+            { icon: <Image src="https://i.ibb.co/ycPxxz8h/IMG-20260515-100429.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "JASMINTOPUP" },
+            { icon: <Image src="https://i.ibb.co/0px31m4Q/1000073671-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="https://jasmin2.onrender.com" className="text-pink-700 hover:underline font-medium">jasmin2.onrender.com</a> },
+            { icon: <Image src="https://i.ibb.co/cSjgfRKB/IMG-20260515-113326.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="mailto:jasmintopup@gmail.com" className="text-pink-700 hover:underline font-medium">jasmintopup@gmail.com</a> },
+            { icon: <Image src="https://i.ibb.co/8Lx3whbn/1000073661-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "ប្រទេសកម្ពុជា" },
           ].map(({ icon, label }, i) => (
             <div key={i} className="flex items-center gap-3 text-sm">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-pink-100 text-base shrink-0">{icon}</span>
@@ -364,7 +365,13 @@ export default function PrivacyPolicyPage() {
         />
         <div className="relative">
           <div className="inline-flex items-center gap-2 mb-4">
-            <img src="https://i.ibb.co/vxB50Vwr/IMG-20260515-114538.png" alt="JASMINTOPUP" className="h-10 w-10 rounded-full object-cover border-2 border-white/60" />
+            <Image
+              src="https://i.ibb.co/vxB50Vwr/IMG-20260515-114538.png"
+              alt="JASMINTOPUP"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-full object-cover border-2 border-white/60"
+            />
             <span className="font-display text-xl font-bold text-white tracking-wide">JASMINTOPUP</span>
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-2 drop-shadow">

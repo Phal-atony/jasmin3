@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -8,7 +9,13 @@ export default function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="flex items-center gap-2.5 mb-3">
-              <img src="https://i.ibb.co/mVYkHDYL/file-000000009d3871faa1dcdb1b67a3b6f5.png" alt="Logo" className="h-10 w-10 rounded-xl object-cover" />
+              <Image
+                src="https://i.ibb.co/mVYkHDYL/file-000000009d3871faa1dcdb1b67a3b6f5.png"
+                alt="Logo"
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-xl object-cover"
+              />
               <span className="font-display text-lg font-extrabold text-pink-800">JASMIN<span className="text-pink-500">TOPUP</span></span>
             </div>
             <p className="text-xs text-pink-600 leading-relaxed font-medium">ការបញ្ចូលទឹកប្រាក់ហ្គេមលឿនបំផុតនៅកម្ពុជា។ ការដឹកជញ្ជូនភ្លាមៗ ការទូទាត់មានសុវត្ថិភាព។</p>
@@ -57,7 +64,13 @@ export default function Footer() {
         </div>
         <div className="mt-8 pt-6 border-t-2 border-pink-100 flex flex-col items-center gap-3">
   <p className="text-[11px] font-bold text-pink-500 uppercase tracking-wider">ទូទាត់តាមរយៈ</p>
-  <img src="https://i.ibb.co/ccg3qyF9/images.png" alt="KHQR" className="w-16 h-8 object-contain rounded-lg" />
+  <Image
+    src="https://i.ibb.co/ccg3qyF9/images.png"
+    alt="KHQR"
+    width={64}
+    height={32}
+    className="h-8 w-16 rounded-lg object-contain"
+  />
   <p className="text-[11px] text-pink-400 font-semibold">Developed by Sokphal</p>
 <Link href="/privacy-policy" className="text-[11px] text-pink-500 font-semibold hover:text-pink-700 hover:underline transition-colors">
   Terms &amp; Policy

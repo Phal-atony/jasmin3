@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getCurrentAdmin } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 
 export default async function AdminLayout({
@@ -19,10 +19,13 @@ export default async function AdminLayout({
       <aside className="w-60 border-r border-fox-border bg-fox-surface flex flex-col">
         <Link href="/admin" className="p-6 border-b border-fox-border">
           <div className="flex items-center gap-2">
-            <img
+            <Image
               src="https://i.ibb.co/ycPxxz8h/IMG-20260515-100429.png"
               alt="TopUpJASMIN Logo"
+              width={40}
+              height={40}
               className="h-10 w-auto object-contain"
+              priority
             />
             <div>
               <div className="font-display font-bold text-sm">

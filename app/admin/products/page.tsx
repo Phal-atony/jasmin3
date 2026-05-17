@@ -222,6 +222,7 @@ function ProductForm({ games, defaultGameId, initial, onCancel, onSaved }: any) 
           <div className="flex items-center gap-4 mt-1">
             {form.imageUrl && (
               <div className="relative shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={form.imageUrl} alt="preview"
                   className="h-20 w-20 rounded-xl object-contain border border-fox-border bg-fox-surface" />
                 <button type="button"

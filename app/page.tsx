@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -51,7 +52,13 @@ export default async function HomePage() {
       <section id="games" className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold mb-2 text-pink-800 flex items-center justify-center gap-2">
-            <img src="https://i.ibb.co/Q3MfYWGH/1000073292-removebg-preview.png" alt="icon" className="h-12 w-12" />
+            <Image
+              src="https://i.ibb.co/Q3MfYWGH/1000073292-removebg-preview.png"
+              alt="icon"
+              width={48}
+              height={48}
+              className="h-12 w-12"
+            />
             ហ្គេមទាំងអស់
           </h2>
           <p className="text-pink-500 text-sm font-bold"></p>

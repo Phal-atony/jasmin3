@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useCallback } from "react";
 import { isValidUid, isValidServerId, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
@@ -348,6 +349,7 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
                     {/* Product Image */}
                     {p.imageUrl && (
                       <div className="flex justify-center mb-3 mt-1">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={p.imageUrl}
                           alt={p.name}
@@ -456,7 +458,13 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
               >
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl overflow-hidden transition-transform duration-300 group-hover:scale-110">
-                    <img src="https://i.ibb.co/ccg3qyF9/images.png" alt="KHQR" className="h-full w-full object-cover" />
+                    <Image
+                      src="https://i.ibb.co/ccg3qyF9/images.png"
+                      alt="KHQR"
+                      width={56}
+                      height={56}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">

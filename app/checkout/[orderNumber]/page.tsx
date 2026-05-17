@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -335,7 +336,7 @@ function KHQRFrame({
         {/* QR code */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           {qrString ? (
-            <img
+            <Image
               src={qrImageUrl(qrString, 230)}
               alt="KHQR code"
               width={230}

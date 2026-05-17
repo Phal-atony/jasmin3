@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -39,10 +40,13 @@ export default function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <img
+          <Image
             src="https://i.ibb.co/ycPxxz8h/IMG-20260515-100429.png"
             alt="Logo"
+            width={44}
+            height={44}
             className="h-11 w-11 rounded-2xl object-cover shadow-lg shadow-pink-300/50 transition-all duration-300 group-hover:scale-110"
+            priority
           />
           <div className="flex flex-col leading-none">
             <span className="font-display text-xl font-extrabold tracking-tight text-pink-800">

@@ -36,6 +36,7 @@ export default function HeroCarousel({ banners }: { banners: Banner[] }) {
 
   const renderCard = (banner: Banner) => (
     <div className="relative h-52 sm:h-72 lg:h-80 w-full shrink-0 rounded-2xl border-2 border-pink-200 shadow-md shadow-pink-100/60 overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={banner.imageUrl}
         alt={banner.title}

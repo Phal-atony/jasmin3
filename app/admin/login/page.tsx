@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -35,10 +36,13 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link href="/" className="flex items-center gap-2 justify-center mb-8">
-          <img
+          <Image
             src="https://i.ibb.co/ycPxxz8h/IMG-20260515-100429.png"
             alt="TopUpJASMIN Logo"
+            width={64}
+            height={64}
             className="h-16 w-auto object-contain"
+            priority
           />
         </Link>
 
