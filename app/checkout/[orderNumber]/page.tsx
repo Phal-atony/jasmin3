@@ -90,7 +90,7 @@ async function buildKhqrBlob(
   const LABEL_Y   = QR_Y + QR_SIZE + 50;
   const H         = LABEL_Y + 44;
 
-  // Load QR image
+  // Load QR image — use window.Image() to avoid TypeScript error
   const qrImg = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
@@ -438,6 +438,7 @@ export default function CheckoutPage() {
     fetchOrder().finally(() => setLoading(false));
   }, [fetchOrder]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!order) return;
     if (TERMINAL.has(order.status) || PAID_STATES.has(order.status)) {
@@ -446,7 +447,7 @@ export default function CheckoutPage() {
     }
     pollRef.current = setInterval(() => { fetchOrder(); }, 3000);
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
-  }, [order, fetchOrder]);
+  }, [order?.status, fetchOrder]);
 
   // Countdown — 5 minutes from order creation
   useEffect(() => {
