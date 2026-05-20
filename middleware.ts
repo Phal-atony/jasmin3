@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const SESSION_COOKIE = "admin_token";
-
+const SESSION_COOKIE   = "admin_token";
 const ALLOWED_IP       = process.env.ADMIN_ALLOWED_IP ?? "";
 const ADMIN_LOGIN_PATH = process.env.ADMIN_LOGIN_PATH ?? "/admin/login";
 
@@ -14,21 +13,37 @@ function getSecret() {
 }
 
 function getClientIP(req: NextRequest): string {
-  // Vercel puts the real client IP in x-forwarded-for as the LAST entry
+  // Try Vercel's dedicated header first
+  const vercelIP = req.headers.get("x-vercel-forwarded-for");
+  if (vercelIP) return vercelIP.split(",")[0].trim();
+
+  // Fallback: x-forwarded-for first entry
   const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const parts = forwarded.split(",").map(s => s.trim());
-    // Last IP is the real client on Vercel
-    return parts[parts.length - 1];
-  }
+  if (forwarded) return forwarded.split(",")[0].trim();
+
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // DEBUG endpoint — visit /admin/debug-ip to see your real IP
+  if (pathname === "/admin/debug-ip") {
+    const ip = getClientIP(req);
+    return new NextResponse(
+      [
+        `Your IP: ${ip}`,
+        `x-vercel-forwarded-for: ${req.headers.get("x-vercel-forwarded-for") ?? "none"}`,
+        `x-forwarded-for: ${req.headers.get("x-forwarded-for") ?? "none"}`,
+        `x-real-ip: ${req.headers.get("x-real-ip") ?? "none"}`,
+      ].join("\n"),
+      { status: 200, headers: { "content-type": "text/plain" } }
+    );
+  }
+
   const ip = getClientIP(req);
 
-  // 1. Block everyone except allowed IP (applies to ALL /admin pages including login)
+  // 1. Block everyone except allowed IP
   if (ALLOWED_IP && ip !== ALLOWED_IP) {
     return new NextResponse("404 Not Found", { status: 404 });
   }
@@ -38,7 +53,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Allow the login page (only reachable if IP passed step 1)
+  // 3. Allow login page (only reachable if IP passed step 1)
   if (pathname === ADMIN_LOGIN_PATH) {
     return NextResponse.next();
   }
