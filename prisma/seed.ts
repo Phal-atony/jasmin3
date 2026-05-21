@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+=======
+/**
+ * prisma/seed.ts — Database seeder (Issue #3)
+ *
+ * Changes:
+ * - Removed hardcoded fallback password "sophal030511"
+ * - Requires ADMIN_EMAIL and ADMIN_PASSWORD from environment
+ * - Never logs the real password
+ * - Enforces minimum password strength
+ */
+
+>>>>>>> 13d2b43 (first commit)
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -19,10 +32,35 @@ async function main() {
     },
   });
 
+<<<<<<< HEAD
   // --- Admin user ---
   const adminEmail = process.env.ADMIN_EMAIL || "admin@jasmintopup.com";
   const adminPassword = process.env.ADMIN_PASSWORD || "sophal030511";
   const passwordHash = await bcrypt.hash(adminPassword, 10);
+=======
+  // --- Admin user (Issue #3: require env vars, no fallback) ---
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail) {
+    throw new Error(
+      "ADMIN_EMAIL environment variable is required. Set it before running the seed."
+    );
+  }
+  if (!adminPassword) {
+    throw new Error(
+      "ADMIN_PASSWORD environment variable is required. Set it before running the seed."
+    );
+  }
+  if (adminPassword.length < 12) {
+    throw new Error(
+      "ADMIN_PASSWORD must be at least 12 characters for security."
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+>>>>>>> 13d2b43 (first commit)
   await prisma.admin.upsert({
     where: { email: adminEmail },
     update: {},
@@ -33,7 +71,13 @@ async function main() {
       role: "SUPERADMIN",
     },
   });
+<<<<<<< HEAD
   console.log(`✅ Admin created: ${adminEmail} / ${adminPassword}`);
+=======
+
+  // Never log the actual password
+  console.log(`✅ Admin created/verified: ${adminEmail} (password set, not logged)`);
+>>>>>>> 13d2b43 (first commit)
 
   // --- Games ---
   const games = [
@@ -55,6 +99,7 @@ async function main() {
         { name: "56 Diamonds", amount: 56, priceUsd: 1.10 },
         { name: "86 Diamonds", amount: 86, bonus: 0, priceUsd: 1.80, badge: "Hot" },
         { name: "172 Diamonds", amount: 172, bonus: 0, priceUsd: 3.50 },
+<<<<<<< HEAD
         { name: "257 Diamonds", amount: 257, bonus: 0, priceUsd: 5.20 },
         { name: "344 Diamonds", amount: 344, bonus: 0, priceUsd: 6.90 },
         { name: "429 Diamonds", amount: 429, bonus: 0, priceUsd: 8.60 },
@@ -171,10 +216,14 @@ async function main() {
         { name: "400 + 40 CP", amount: 400, bonus: 40, priceUsd: 4.99 },
         { name: "800 + 160 CP", amount: 800, bonus: 160, priceUsd: 9.99 },
         { name: "2000 + 600 CP", amount: 2000, bonus: 600, priceUsd: 24.99 },
+=======
+        { name: "706 Diamonds", amount: 706, bonus: 0, priceUsd: 13.80, badge: "Best Value" },
+>>>>>>> 13d2b43 (first commit)
       ],
     },
   ];
 
+<<<<<<< HEAD
   for (const g of games) {
     const { products, ...gameData } = g;
     const game = await prisma.game.upsert({
@@ -202,11 +251,37 @@ await prisma.product.deleteMany({ where: { gameId: game.id } });
   }
 
   console.log("\n🎉 Seed complete!");
+=======
+  for (const game of games) {
+    const { products, ...gameData } = game;
+    const created = await prisma.game.upsert({
+      where: { slug: game.slug },
+      update: gameData,
+      create: gameData,
+    });
+    for (const prod of products) {
+      await prisma.product.upsert({
+        where: {
+          id: `${created.id}-${prod.name.toLowerCase().replace(/\s+/g, "-")}`,
+        },
+        update: prod,
+        create: { ...prod, gameId: created.id },
+      });
+    }
+    console.log(`✅ Game seeded: ${game.name}`);
+  }
+
+  console.log("✅ Seed complete.");
+>>>>>>> 13d2b43 (first commit)
 }
 
 main()
   .catch((e) => {
+<<<<<<< HEAD
     console.error(e);
+=======
+    console.error("Seed error:", e);
+>>>>>>> 13d2b43 (first commit)
     process.exit(1);
   })
   .finally(async () => {

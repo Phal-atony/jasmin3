@@ -120,6 +120,10 @@ model Admin {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   lastLoginAt  DateTime?
+<<<<<<< HEAD
+=======
+  totpSecret   String?   // TOTP secret for authenticator app 2FA (Issue #1)
+>>>>>>> 13d2b43 (first commit)
 }
 
 model Settings {
@@ -210,3 +214,28 @@ model AdminAuthLock {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+<<<<<<< HEAD
+=======
+
+// ── Security additions ────────────────────────────────────────────────────────
+
+/// Stores processed webhook transaction IDs to prevent replay attacks (Issue #9)
+model ProcessedWebhookEvent {
+  id            String   @id @default(cuid())
+  transactionId String   @unique
+  orderNumber   String?
+  processedAt   DateTime @default(now())
+
+  @@index([processedAt])
+}
+
+/// DB-backed rate limit entries (Issue #4)
+model RateLimitEntry {
+  id        String   @id @default(cuid())
+  key       String
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+>>>>>>> 13d2b43 (first commit)

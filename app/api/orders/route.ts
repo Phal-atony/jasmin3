@@ -5,6 +5,10 @@ import { generateOrderNumber, isValidUid, calcKhr } from "@/lib/utils";
 import { initiatePayment } from "@/lib/payment";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+<<<<<<< HEAD
+=======
+import { applyRateLimit } from "@/lib/rateLimit";
+>>>>>>> 13d2b43 (first commit)
 
 const createOrderSchema = z.object({
   gameId: z.string().min(1),
@@ -19,6 +23,14 @@ const createOrderSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+<<<<<<< HEAD
+=======
+  // Rate limit: 10 orders per IP per 10 minutes (Issue #4)
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = await applyRateLimit(`orders:${ip}`, 10, 10 * 60 * 1000, ip);
+  if (rl) return rl;
+
+>>>>>>> 13d2b43 (first commit)
   try {
     const body = await req.json();
     const parsed = createOrderSchema.safeParse(body);
