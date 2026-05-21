@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /**
  * prisma/seed.ts — Database seeder (Issue #3)
  *
@@ -10,7 +8,6 @@
  * - Enforces minimum password strength
  */
 
->>>>>>> 13d2b43 (first commit)
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -32,12 +29,6 @@ async function main() {
     },
   });
 
-<<<<<<< HEAD
-  // --- Admin user ---
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@jasmintopup.com";
-  const adminPassword = process.env.ADMIN_PASSWORD || "sophal030511";
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
-=======
   // --- Admin user (Issue #3: require env vars, no fallback) ---
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -60,7 +51,6 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
->>>>>>> 13d2b43 (first commit)
   await prisma.admin.upsert({
     where: { email: adminEmail },
     update: {},
@@ -71,13 +61,9 @@ async function main() {
       role: "SUPERADMIN",
     },
   });
-<<<<<<< HEAD
-  console.log(`✅ Admin created: ${adminEmail} / ${adminPassword}`);
-=======
 
   // Never log the actual password
   console.log(`✅ Admin created/verified: ${adminEmail} (password set, not logged)`);
->>>>>>> 13d2b43 (first commit)
 
   // --- Games ---
   const games = [
@@ -99,20 +85,7 @@ async function main() {
         { name: "56 Diamonds", amount: 56, priceUsd: 1.10 },
         { name: "86 Diamonds", amount: 86, bonus: 0, priceUsd: 1.80, badge: "Hot" },
         { name: "172 Diamonds", amount: 172, bonus: 0, priceUsd: 3.50 },
-<<<<<<< HEAD
-        { name: "257 Diamonds", amount: 257, bonus: 0, priceUsd: 5.20 },
-        { name: "344 Diamonds", amount: 344, bonus: 0, priceUsd: 6.90 },
-        { name: "429 Diamonds", amount: 429, bonus: 0, priceUsd: 8.60 },
-        { name: "514 Diamonds", amount: 514, bonus: 0, priceUsd: 10.30 },
         { name: "706 Diamonds", amount: 706, bonus: 0, priceUsd: 13.80, badge: "Best Value" },
-        { name: "878 Diamonds", amount: 878, bonus: 0, priceUsd: 17.20 },
-        { name: "1050 Diamonds", amount: 1050, bonus: 0, priceUsd: 20.60 },
-        { name: "2195 Diamonds", amount: 2195, bonus: 0, priceUsd: 42.80 },
-        { name: "3688 Diamonds", amount: 3688, bonus: 0, priceUsd: 72.00 },
-        { name: "5532 Diamonds", amount: 5532, bonus: 0, priceUsd: 108.00 },
-        { name: "9288 Diamonds", amount: 9288, bonus: 0, priceUsd: 180.00 },
-        { name: "Weekly Diamond Pass", amount: 0, priceUsd: 1.50, badge: "Pass" },
-        { name: "Twilight Pass", amount: 0, priceUsd: 7.90, badge: "Pass" },
       ],
     },
     {
@@ -216,42 +189,10 @@ async function main() {
         { name: "400 + 40 CP", amount: 400, bonus: 40, priceUsd: 4.99 },
         { name: "800 + 160 CP", amount: 800, bonus: 160, priceUsd: 9.99 },
         { name: "2000 + 600 CP", amount: 2000, bonus: 600, priceUsd: 24.99 },
-=======
-        { name: "706 Diamonds", amount: 706, bonus: 0, priceUsd: 13.80, badge: "Best Value" },
->>>>>>> 13d2b43 (first commit)
       ],
     },
   ];
 
-<<<<<<< HEAD
-  for (const g of games) {
-    const { products, ...gameData } = g;
-    const game = await prisma.game.upsert({
-      where: { slug: gameData.slug },
-      update: gameData,
-      create: gameData,
-    });
-
-   // Clear old orders first because orders reference products
-await prisma.order.deleteMany({ where: { gameId: game.id } });
-
-// Clear old products for this game and recreate to keep seed idempotent
-await prisma.product.deleteMany({ where: { gameId: game.id } });
-    for (let i = 0; i < products.length; i++) {
-      const p = products[i];
-      await prisma.product.create({
-        data: {
-          ...p,
-          gameId: game.id,
-          sortOrder: i,
-        },
-      });
-    }
-    console.log(`✅ ${game.name} with ${products.length} products`);
-  }
-
-  console.log("\n🎉 Seed complete!");
-=======
   for (const game of games) {
     const { products, ...gameData } = game;
     const created = await prisma.game.upsert({
@@ -272,16 +213,11 @@ await prisma.product.deleteMany({ where: { gameId: game.id } });
   }
 
   console.log("✅ Seed complete.");
->>>>>>> 13d2b43 (first commit)
 }
 
 main()
   .catch((e) => {
-<<<<<<< HEAD
-    console.error(e);
-=======
     console.error("Seed error:", e);
->>>>>>> 13d2b43 (first commit)
     process.exit(1);
   })
   .finally(async () => {
