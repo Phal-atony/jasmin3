@@ -1,15 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { isValidUid, isValidServerId, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
-import { QrCode, ArrowRight, Lock, Check, Smartphone, Search, UserRoundCheck, AlertCircle, Tag, Loader2 } from "lucide-react";
+import { QrCode, ArrowRight, Lock, Check, Smartphone, Search, UserRoundCheck, AlertCircle, Tag, Loader2, X } from "lucide-react";
 
 // Games that support automatic nickname lookup via /api/lookup-uid
 const LOOKUP_SLUGS = new Set(["mobile-legends", "free-fire", "honor-of-king", "pubg-mobile", "ro-blox"]);
 // MLBB & similar games that use a separate "Zone ID" instead of a server dropdown
 const ZONE_ID_SLUGS = new Set(["mobile-legends", "honor-of-king"]);
+
+const DISMISS_KEY = "topup_bar_dismissed";
 
 interface Product {
   id: string;
@@ -42,6 +44,22 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
   const [method, setMethod] = useState<"KHPAY">("KHPAY");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dismissed state — persists across page refresh via sessionStorage
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
+    }
+  }, []);
+
+  function dismissBar() {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(DISMISS_KEY, "1");
+    }
+    setDismissed(true);
+  }
 
   // Promo code state
   const [promoInput, setPromoInput] = useState("");
@@ -591,64 +609,77 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
       </div>
 
       {/* Mobile sticky bottom */}
-      <div className="lg:hidden card p-5 sticky bottom-3 mt-8 border border-pink-400/30 shadow-2xl shadow-pink-300/10 backdrop-blur-md">
-        {selectedProduct && (
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <div className="text-xs uppercase tracking-wider text-pink-500">តម្លៃសរុប</div>
-              <div key={`${selectedProduct.id}-${currency}`} className="font-display text-3xl font-extrabold text-pink-600">
-                {format(effectivePrice)}
+      {!dismissed && (
+        <div className="relative lg:hidden card p-5 sticky bottom-3 mt-8 border border-pink-400/30 shadow-2xl shadow-pink-300/10 backdrop-blur-md">
+
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={dismissBar}
+            aria-label="Close"
+            className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-pink-100 text-pink-400 hover:bg-pink-200 hover:text-pink-600 transition-colors"
+          >
+            <X className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+
+          {selectedProduct && (
+            <div className="flex justify-between items-center mb-4 pr-8">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-pink-500">តម្លៃសរុប</div>
+                <div key={`${selectedProduct.id}-${currency}`} className="font-display text-3xl font-extrabold text-pink-600">
+                  {format(effectivePrice)}
+                </div>
+                {currency === "USD" ? (
+                  <div className="text-[11px] text-pink-500 font-mono">≈ {toKhr(effectivePrice).toLocaleString("en-US")} ៛</div>
+                ) : (
+                  <div className="text-[11px] text-pink-500 font-mono">≈ ${effectivePrice.toFixed(2)} USD</div>
+                )}
+                {promoApplied && (
+                  <div className="text-xs text-green-600">−{format(promoApplied.discountUsd)} off</div>
+                )}
               </div>
-              {currency === "USD" ? (
-                <div className="text-[11px] text-pink-500 font-mono">≈ {toKhr(effectivePrice).toLocaleString("en-US")} ៛</div>
-              ) : (
-                <div className="text-[11px] text-pink-500 font-mono">≈ ${effectivePrice.toFixed(2)} USD</div>
-              )}
-              {promoApplied && (
-                <div className="text-xs text-green-600">−{format(promoApplied.discountUsd)} off</div>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-pink-500">
-                {selectedProduct.amount > 0
-                  ? `${selectedProduct.amount.toLocaleString()} ${game.currencyName}`
-                  : selectedProduct.name}
+              <div className="text-right">
+                <div className="text-sm text-pink-500">
+                  {selectedProduct.amount > 0
+                    ? `${selectedProduct.amount.toLocaleString()} ${game.currencyName}`
+                    : selectedProduct.name}
+                </div>
+                {selectedProduct.bonus > 0 && (
+                  <div className="text-xs text-pink-400">+ {selectedProduct.bonus} bonus</div>
+                )}
               </div>
-              {selectedProduct.bonus > 0 && (
-                <div className="text-xs text-pink-400">+ {selectedProduct.bonus} bonus</div>
-              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-600 bg-red-100 p-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-600 bg-red-100 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
 
-        {/* Mobile hint messages */}
-        {!selected && (
-          <p className="mb-2 text-xs text-pink-400 text-center">👆 សូមជ្រើសរើសកញ្ចប់មុន</p>
-        )}
-        {selected && needsNickname && nicknameStatus !== "verified" && isValidUid(uid) && (
-          <p className="mb-2 text-xs text-pink-400 text-center">🔍 សូមពិនិត្យឈ្មោះ Player មុន</p>
-        )}
+          {/* Mobile hint messages */}
+          {!selected && (
+            <p className="mb-2 text-xs text-pink-400 text-center">👆 សូមជ្រើសរើសកញ្ចប់មុន</p>
+          )}
+          {selected && needsNickname && nicknameStatus !== "verified" && isValidUid(uid) && (
+            <p className="mb-2 text-xs text-pink-400 text-center">🔍 សូមពិនិត្យឈ្មោះ Player មុន</p>
+          )}
 
-        <button
-          type="submit"
-          disabled={!canSubmit || submitting}
-          className="btn-primary w-full text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-        >
-          {submitting ? "Creating order..." : "Pay Now"}
-          {!submitting && <ArrowRight className="h-5 w-5" strokeWidth={2.5} />}
-        </button>
+          <button
+            type="submit"
+            disabled={!canSubmit || submitting}
+            className="btn-primary w-full text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            {submitting ? "Creating order..." : "Pay Now"}
+            {!submitting && <ArrowRight className="h-5 w-5" strokeWidth={2.5} />}
+          </button>
 
-        <p className="flex items-center justify-center gap-1.5 text-xs text-pink-500 text-center mt-3">
-          <Lock className="h-3 w-3" strokeWidth={2.5} />
-          ទូទាត់ប្រាក់ដោយសុវត្ថិភាព
-        </p>
-      </div>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-pink-500 text-center mt-3">
+            <Lock className="h-3 w-3" strokeWidth={2.5} />
+            ទូទាត់ប្រាក់ដោយសុវត្ថិភាព
+          </p>
+        </div>
+      )}
     </form>
   );
 }

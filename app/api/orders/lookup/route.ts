@@ -3,12 +3,27 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const lookupSchema = z.object({
   query: z.string().min(3).max(100),
 });
 
 export async function POST(req: NextRequest) {
+  // ── Rate limit: 7 requests / 60 s / IP ──────────────────────────────────
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (!checkRateLimit(ip, 7, 60_000)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a minute and try again." },
+      { status: 429 }
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   try {
     const body = await req.json();
     const parsed = lookupSchema.safeParse(body);
@@ -22,8 +37,6 @@ export async function POST(req: NextRequest) {
     const { query } = parsed.data;
     const trimmed = query.trim();
 
-    // Only surface orders where payment has actually gone through.
-    // Hide PENDING / CANCELLED / FAILED / REFUNDED from public search.
     const PAID_STATUSES = ["PAID", "PROCESSING", "DELIVERED"];
 
     const orders = await prisma.order.findMany({
