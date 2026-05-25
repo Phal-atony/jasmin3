@@ -126,18 +126,22 @@ model Admin {
 }
 
 model Settings {
-  id          Int      @id @default(1)
-  siteName    String   @default("RITHTOPUP")
-  exchangeRate Float   @default(4100) // KHR per 1 USD
-  supportTelegram String? @default("@rithtopup")
-  supportEmail String? @default("support@rithtopup.com")
-  maintenanceMode Boolean @default(false)
+  id                 Int      @id @default(1)
+  telegramBotToken   String?
+  updatedAt          DateTime @updatedAt
+  siteName           String   @default("JASMIN TOPUP")
+  exchangeRate       Float    @default(4100)
+  supportTelegram    String?
+  supportEmail       String?
+  maintenanceMode    Boolean  @default(false)
   maintenanceMessage String?
-  announcement String?
-  announcementTone String? @default("info") // info | warning | promo
-  telegramBotToken String?
-  telegramChatId   String?
-  updatedAt   DateTime @updatedAt
+  announcement       String?
+  announcementTone   String?
+  telegramChatId     String?
+
+  logoUrl            String?
+  logoText           String?
+  logoTagline        String?
 }
 
 model HeroBanner {
