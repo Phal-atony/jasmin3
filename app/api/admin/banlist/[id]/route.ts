@@ -7,9 +7,10 @@ import { withAdminAuth } from "@/lib/withAdminAuth";
 
 export const DELETE = withAdminAuth(async (
   _req: NextRequest,
-  context: any
+  ctx,
+  _admin
 ) => {
-  const { id } = await context.params;
+  const { id } = await ctx.params;
   await prisma.blockedIdentity.delete({ where: { id } });
   await writeAudit({ action: "banlist.remove", targetType: "banlist", targetId: id });
   return NextResponse.json({ ok: true });
