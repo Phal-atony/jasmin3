@@ -239,9 +239,9 @@ model RateLimitEntry {
 model UsedTotpToken {
   id        String   @id @default(cuid())
   adminId   String
-  token     String   // 6-digit TOTP code
+  token     String
   expiresAt DateTime
+  createdAt DateTime @default(now())
 
-  @@unique([adminId, token])   // ← ត្រូវការសម្រាប់ findUnique({ adminId_token: ... })
-  @@index([expiresAt])         // ← ធ្វើឱ្យ deleteMany លឿន
+  @@unique([adminId, token])
 }
