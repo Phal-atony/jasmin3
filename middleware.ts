@@ -14,6 +14,30 @@ const LOGIN_PATHS = new Set([
   "/admin/sophallogin",
 ]);
 
+// ✅ Valid admin routes — unknown paths will NOT reveal the real login URL
+const VALID_ADMIN_PREFIXES = [
+  "/admin/audit-logs",
+  "/admin/banlist",
+  "/admin/banners",
+  "/admin/blog",
+  "/admin/customers",
+  "/admin/faqs",
+  "/admin/games",
+  "/admin/orders",
+  "/admin/products",
+  "/admin/promo-codes",
+  "/admin/settings",
+  "/admin/login",
+  "/admin/sophallogin",
+];
+
+function isValidAdminPath(pathname: string): boolean {
+  if (pathname === ADMIN_HOME_PATH) return true;
+  return VALID_ADMIN_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+}
+
 function getSecret() {
   const secret = process.env.ADMIN_JWT_SECRET;
 
@@ -189,9 +213,14 @@ export async function middleware(req: NextRequest) {
     return jsonUnauthorized();
   }
 
-  // ✅ Not logged in + protected admin page → login
-  if (!isLoggedIn && pathname.startsWith("/admin")) {
+  // ✅ Not logged in + valid protected admin page → real login
+  if (!isLoggedIn && isValidAdminPath(pathname)) {
     return redirectResponse(new URL(ADMIN_LOGIN_PATH, req.url));
+  }
+
+  // ✅ Not logged in + UNKNOWN admin path (e.g. /admin/ssdsd) → honeypot, not real login
+  if (!isLoggedIn && pathname.startsWith("/admin")) {
+    return redirectResponse(new URL(HONEY_PATH, req.url));
   }
 
   // ✅ Logged in → allow

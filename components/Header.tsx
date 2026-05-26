@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import CurrencyToggle from "./CurrencyToggle";
 
 const NAV = [
   { href: "/",       label: "ទំព័រដើម" },
@@ -89,7 +88,7 @@ export default function Header() {
         <div className="flex items-center gap-2">
 
           {/* Currency toggle — desktop only (full size) */}
-          <CurrencyToggle className="hidden md:inline-flex" />
+          
 
           {/* Track order — tablet+ */}
           <Link
@@ -106,7 +105,7 @@ export default function Header() {
           <div className="md:hidden flex items-center gap-2">
 
             {/* Currency pill — sits right next to the burger */}
-            <CurrencyToggle />
+            
 
             {/* Burger button */}
             <button
