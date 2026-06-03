@@ -1,6 +1,10 @@
 import crypto from "crypto";
 import nodeFetch from "node-fetch";
 import { HttpsProxyAgent } from "https-proxy-agent";
+import {
+  assertProductionPaymentConfig,
+  assertRealKhpayConfig,
+} from "@/lib/payment-validation";
 
 export type PaymentMethod = "KHPAY" | "MANUAL" | "ABA" | "ACLEDA" | "WING";
 
@@ -22,6 +26,14 @@ export interface PaymentInitResult {
   qrString?: string;
   expiresAt: Date;
 }
+
+export type KhpayStatusResult = {
+  status: string;
+  paid: boolean;
+  transactionId?: string;
+  amount?: string;
+  currency?: string;
+};
 
 function cleanEnv(value?: string): string {
   return (value || "").trim().replace(/^['\"]|['\"]$/g, "");
@@ -58,33 +70,29 @@ const khpayFetch = (url: string, options: any): Promise<Response> =>
   }) as unknown as Promise<Response>;
 
 export function isPaymentSimulationMode(): boolean {
-  return cleanEnv(process.env.PAYMENT_SIMULATION_MODE).toLowerCase() === "true" || !KHPAY_KEY;
+  assertProductionPaymentConfig();
+  return cleanEnv(process.env.PAYMENT_SIMULATION_MODE).toLowerCase() === "true";
 }
 
 export function isPaymentSimulationAllowed(): boolean {
-  return (
-    isPaymentSimulationMode() ||
-    cleanEnv(process.env.KHPAY_FALLBACK_TO_SIMULATION).toLowerCase() === "true"
-  );
+  assertProductionPaymentConfig();
+  return process.env.NODE_ENV !== "production" && isPaymentSimulationMode();
 }
 
 export async function initiatePayment(
   args: InitiatePaymentArgs
 ): Promise<PaymentInitResult> {
-  if (isPaymentSimulationMode()) return simulatePayment(args);
-  if (!["KHPAY"].includes(args.method)) {
-  return simulatePayment(args); // ABA, ACLEDA, WING → simulation ជាមុន
-}
+  assertProductionPaymentConfig();
 
-  try {
-    return await initiateKhpay(args);
-  } catch (error) {
-    if (cleanEnv(process.env.KHPAY_FALLBACK_TO_SIMULATION).toLowerCase() === "true") {
-      console.warn("[khpay] gateway failed; using simulation fallback:", error);
-      return simulatePayment(args);
-    }
-    throw error;
+  if (isPaymentSimulationMode()) return simulatePayment(args);
+
+  if (args.method !== "KHPAY") {
+    throw new Error(
+      `Payment method ${args.method} is not supported for real payments yet. Use KHPAY or enable PAYMENT_SIMULATION_MODE=true only in local development.`
+    );
   }
+
+  return initiateKhpay(args);
 }
 
 function getAppBaseUrl(): string {
@@ -125,7 +133,6 @@ function formatKhpayError(status: number, payload: any): string {
       `HTTP ${status}`,
       "KHPay refused this request.",
       "Check KHPAY_API_KEY, KHPAY_BASE_URL, merchant account/payment settings, and whether this domain is allowed.",
-      "For testing only, set PAYMENT_SIMULATION_MODE=true in Vercel.",
       remoteMessage ? `Remote: ${String(remoteMessage).slice(0, 180)}` : "",
     ].filter(Boolean).join(" ");
   }
@@ -142,7 +149,7 @@ function formatKhpayError(status: number, payload: any): string {
 }
 
 async function initiateKhpay(args: InitiatePaymentArgs): Promise<PaymentInitResult> {
-  if (!KHPAY_KEY) return simulatePayment(args);
+  assertRealKhpayConfig();
 
   const isPublicUrl = (u?: string) =>
     !!u &&
@@ -189,21 +196,23 @@ async function initiateKhpay(args: InitiatePaymentArgs): Promise<PaymentInitResu
     throw new Error("KHPay: response did not include qr_string");
   }
 
+  if (!data?.transaction_id) {
+    throw new Error("KHPay: response did not include transaction_id");
+  }
+
   return {
-    paymentRef: data.transaction_id,
+    paymentRef: String(data.transaction_id),
     redirectUrl: data.payment_url || `/checkout/${args.orderNumber}`,
     qrString: data.qr_string,
     expiresAt: new Date(Date.now() + (Number(data.expires_in) || 180) * 1000),
   };
 }
 
-export async function fetchKhpayStatus(transactionId: string): Promise<{
-  status: string;
-  paid: boolean;
-  amount?: string;
-  currency?: string;
-} | null> {
-  if (isPaymentSimulationMode() || !KHPAY_KEY || transactionId.startsWith("SIM-")) return null;
+export async function fetchKhpayStatus(transactionId: string): Promise<KhpayStatusResult | null> {
+  assertProductionPaymentConfig();
+
+  if (!transactionId || transactionId.startsWith("SIM-")) return null;
+  assertRealKhpayConfig();
 
   const res = await khpayFetch(`${KHPAY_BASE}/qr/check/${encodeURIComponent(transactionId)}`, {
     headers: {
@@ -222,6 +231,7 @@ export async function fetchKhpayStatus(transactionId: string): Promise<{
   return {
     status: String(json.data.status || "pending"),
     paid: Boolean(json.data.paid),
+    transactionId: json.data.transaction_id ? String(json.data.transaction_id) : transactionId,
     amount: json.data.amount,
     currency: json.data.currency,
   };
@@ -233,13 +243,6 @@ export function verifyWebhook(
   headers: Record<string, string>
 ): boolean {
   // ⚠️  NEVER bypass signature verification based on simulation mode.
-  //
-  // Simulation flows are handled entirely by /api/payment/simulate — that
-  // route updates the order directly and never calls this webhook endpoint.
-  // If someone POSTs to /api/payment/webhook/khpay while simulation mode is
-  // active (e.g. PAYMENT_SIMULATION_MODE accidentally left true in production),
-  // we must still reject unsigned requests; otherwise anyone could forge a
-  // "payment.paid" event and receive free top-ups.
   const secret = cleanEnv(process.env.KHPAY_WEBHOOK_SECRET);
   if (!secret) {
     console.warn("[webhook] KHPAY_WEBHOOK_SECRET not set — rejecting.");

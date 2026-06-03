@@ -1,11 +1,21 @@
-// Generate human-friendly order number: RT-XXXXXX
+// Generate secure human-friendly order number: RT-SO3JSJ6JJ0
 export function generateOrderNumber(): string {
+  const prefix = "RT";
+  const length = 10;
+
+  // Removed I and O to avoid confusion with 1 and 0
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let n = "";
-  for (let i = 0; i < 6; i++) {
-    n += chars[Math.floor(Math.random() * chars.length)];
+
+  const bytes = new Uint8Array(length);
+  globalThis.crypto.getRandomValues(bytes);
+
+  let randomPart = "";
+
+  for (let i = 0; i < length; i++) {
+    randomPart += chars[bytes[i] % chars.length];
   }
-  return `RT-${n}`;
+
+  return `${prefix}-${randomPart}`;
 }
 
 export function formatUsd(amount: number): string {
@@ -17,7 +27,7 @@ export function formatKhr(amount: number): string {
 }
 
 export function calcKhr(usd: number, rate: number = 4100): number {
-  return Math.round(usd * rate / 100) * 100; // round to nearest 100 KHR
+  return Math.round((usd * rate) / 100) * 100; // round to nearest 100 KHR
 }
 
 // Validate UID format - basic: digits only, 6-20 chars

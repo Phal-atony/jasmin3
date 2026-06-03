@@ -3,6 +3,12 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { fetchKhpayStatus } from "@/lib/payment";
+import {
+  isRemotePaid,
+  logPaymentValidationFailure,
+  validatePaymentForOrder,
+} from "@/lib/payment-validation";
+import { logSecurityEvent } from "@/lib/secureLogger";
 
 /**
  * Public order lookup.
@@ -46,44 +52,60 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  // Sync payment status from KHPay when webhook isn't reachable (localhost dev).
+  // Public order lookup is read-only in production.
+  // Development-only sync is opt-in and still requires strict payment validation.
+  const allowPublicPaymentSync =
+    process.env.NODE_ENV !== "production" &&
+    process.env.ALLOW_PUBLIC_PAYMENT_SYNC === "true";
+
   if (
+    allowPublicPaymentSync &&
     order.status === "PENDING" &&
     order.paymentRef &&
     !order.paymentRef.startsWith("SIM-")
   ) {
     try {
-      const remote  = await fetchKhpayStatus(order.paymentRef);
-      const isPaid  = remote?.paid === true || remote?.status === "paid";
+      const remote = await fetchKhpayStatus(order.paymentRef);
 
-      if (isPaid) {
-        order = await prisma.order.update({
-          where: { id: order.id },
-          data:  { status: "PAID", paidAt: new Date() },
-          include: {
-            game:    { select: { name: true, slug: true } },
-            product: { select: { name: true } },
-          },
+      if (isRemotePaid(remote)) {
+        const validation = validatePaymentForOrder(order, {
+          orderNumber: order.orderNumber,
+          transactionId: remote?.transactionId ?? order.paymentRef,
+          amount: remote?.amount,
+          currency: remote?.currency,
+          status: remote?.status,
+          paid: remote?.paid,
         });
-      } else if (
-        remote?.status === "expired" ||
-        remote?.status === "failed"
-      ) {
-        order = await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            status:        remote.status === "expired" ? "CANCELLED" : "FAILED",
-            failureReason: `KHPay ${remote.status}`,
-          },
-          include: {
-            game:    { select: { name: true, slug: true } },
-            product: { select: { name: true } },
-          },
-        });
+
+        if (validation.ok) {
+          order = await prisma.order.update({
+            where: { id: order.id },
+            data: { status: "PAID", paidAt: new Date() },
+            include: {
+              game: { select: { name: true, slug: true } },
+              product: { select: { name: true } },
+            },
+          });
+        } else {
+          logPaymentValidationFailure("public_sync", validation);
+        }
       }
-    } catch {
-      // Silently ignore poll errors — retry on next request.
+    } catch (error) {
+      logSecurityEvent({
+        event: "payment_public_sync_blocked",
+        detail: error instanceof Error ? error.message : "public sync failed",
+      });
     }
+  } else if (
+    process.env.NODE_ENV === "production" &&
+    order.status === "PENDING" &&
+    order.paymentRef &&
+    !order.paymentRef.startsWith("SIM-")
+  ) {
+    logSecurityEvent({
+      event: "payment_public_sync_blocked",
+      detail: `production public order lookup is read-only; order=${order.orderNumber}`,
+    });
   }
 
   // Determine if payment info is safe to expose

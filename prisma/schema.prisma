@@ -75,7 +75,7 @@ model Order {
   amountKhr      Float?
   currency       String       @default("USD")
   paymentMethod  String       // ABA_PAY | BINANCE_PAY | MANUAL
-  paymentRef     String?      // gateway transaction id
+  paymentRef     String?      @unique // gateway transaction id; one provider transaction can pay only one order
   paymentUrl     String?      // redirect URL from gateway
   qrString       String?      // KHQR EMV payload (for on-site display)
   paymentExpiresAt DateTime?  // QR/payment expiry time
