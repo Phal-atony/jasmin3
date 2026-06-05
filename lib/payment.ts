@@ -111,7 +111,7 @@ function simulatePayment(args: InitiatePaymentArgs): PaymentInitResult {
   return {
     paymentRef: ref,
     redirectUrl: `${base}/api/payment/simulate?order=${encodeURIComponent(args.orderNumber)}&ref=${encodeURIComponent(ref)}&method=${encodeURIComponent(args.method)}`,
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    expiresAt: new Date(Date.now() + 1 * 60 * 1000),
   };
 }
 

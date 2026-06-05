@@ -5,6 +5,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { isValidUid, isValidServerId, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { QrCode, ArrowRight, Lock, Check, Smartphone, Search, UserRoundCheck, AlertCircle, Tag, Loader2, X } from "lucide-react";
+import KHQRBottomSheet from "@/components/KHQRBottomSheet";
 
 // Games that support automatic nickname lookup via /api/lookup-uid
 const LOOKUP_SLUGS = new Set(["mobile-legends", "free-fire", "honor-of-king", "pubg-mobile", "ro-blox"]);
@@ -41,6 +42,7 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
   const [serverId, setServerId] = useState(
     ZONE_ID_SLUGS.has(game.slug) ? "" : (game.servers[0] ?? "")
   );
+  const [paymentPopup, setPaymentPopup] = useState<any | null>(null);
   const [method, setMethod] = useState<"KHPAY">("KHPAY");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,10 +192,33 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create order");
-      window.location.href = data.redirectUrl;
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create order");
+      }
+
+      const orderNumber = data.orderNumber || data.order?.orderNumber;
+
+      if (!orderNumber) {
+        throw new Error("Order number not returned from API");
+      }
+
+      // ✅ Get order detail + KHQR data
+      const orderRes = await fetch(`/api/orders/${encodeURIComponent(orderNumber)}`, {
+        cache: "no-store",
+      });
+
+      const orderData = await orderRes.json();
+
+      if (!orderRes.ok) {
+        throw new Error(orderData.error || "Failed to load payment QR");
+      }
+
+      // ✅ Open KHQR popup instead of redirect
+      setPaymentPopup(orderData);
+      setSubmitting(false);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Something went wrong");
       setSubmitting(false);
     }
   }
@@ -211,7 +236,7 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
                 <span className="absolute inset-0 rounded-full bg-pink-500/40 animate-ping" />
                 <span className="relative">1</span>
               </div>
-              <h2 className="font-display text-xl font-extrabold text-pink-800">Enter Account Info</h2>
+              <h2 className="font-display text-xl font-extrabold text-pink-800">បញ្ចូលព័ត៌មានគណនី</h2>
             </div>
 
             <div className="card p-5 sm:p-6 space-y-4">
@@ -719,6 +744,13 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
             ទូទាត់ប្រាក់ដោយសុវត្ថិភាព
           </p>
         </div>
+      )}
+
+      {paymentPopup && (
+        <KHQRBottomSheet
+          order={paymentPopup}
+          onClose={() => setPaymentPopup(null)}
+        />
       )}
     </form>
   );
