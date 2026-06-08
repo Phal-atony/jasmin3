@@ -495,44 +495,7 @@ export default function KHQRBottomSheet({
 
               <p className="mt-3 text-lg font-bold text-gray-900">
                 Scan to Pay
-              </p>
-
-              <div className="mt-4 w-full rounded-2xl border border-pink-100 bg-pink-50 px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-pink-500">
-                  Order Number
-                </p>
-
-                <p className="mt-1 break-all font-mono text-sm font-black text-gray-900">
-                  {currentOrder.orderNumber}
-                </p>
-              </div>
-
-              <div className="mt-4 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={copyOrderNumber}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-pink-200 bg-white px-4 py-3 text-sm font-extrabold text-pink-600 shadow-sm transition hover:bg-pink-50 active:scale-[0.99]"
-                >
-                  {copiedOrder ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-
-                  {copiedOrder ? "Copied" : "Copy Order"}
-                </button>
-
-                <a
-                  href={orderPageUrl}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-100 px-4 py-3 text-sm font-extrabold text-pink-700 transition hover:bg-pink-200 active:scale-[0.99]"
-                >
-                  Go to Order
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-
-              <p className="my-2 text-gray-400">or</p>
-
+</p>
               <button
                 type="button"
                 onClick={downloadKHQRCard}
