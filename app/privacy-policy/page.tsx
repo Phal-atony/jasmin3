@@ -19,7 +19,7 @@ const sections = [
     title: "សេចក្តីផ្តើម",
     content: (
       <p>
-        JASMINTOPUP (<a href="https://jasmin2.onrender.com" className="text-pink-600 hover:underline font-semibold">jasmin2.onrender.com</a>)
+        JASMINTOPUP (<a href="https://www.jasmintopup.site" className="text-pink-600 hover:underline font-semibold">www.jasmintopup.site</a>)
         គឺជា platform សម្រាប់បញ្ចូល diamonds, coins, Robux និង game credits ផ្សេងៗ
         ស្ថិតនៅក្នុងប្រទេសកម្ពុជា។ គោលការណ៍ឯកជនភាពនេះ ពន្យល់ពីរបៀបដែលយើង
         ប្រមូល រក្សា ប្រើប្រាស់ និងការពារព័ត៌មានផ្ទាល់ខ្លួនរបស់អ្នក នៅពេល
@@ -331,8 +331,8 @@ const sections = [
         </p>
         <div className="rounded-2xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-white p-5 space-y-3">
           {[
-            { icon: <Image src="https://i.ibb.co/ycPxxz8h/IMG-20260515-100429.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "JASMINTOPUP" },
-            { icon: <Image src="https://i.ibb.co/0px31m4Q/1000073671-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="https://jasmin2.onrender.com" className="text-pink-700 hover:underline font-medium">jasmin2.onrender.com</a> },
+            { icon: <Image src="https://i.ibb.co/cKr3gptJ/jasmintopup-logo-no-bg-transparent.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "JASMINTOPUP" },
+            { icon: <Image src="https://i.ibb.co/0px31m4Q/1000073671-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="https://www.jasmintopup.site" className="text-pink-700 hover:underline font-medium">jasmin2.onrender.com</a> },
             { icon: <Image src="https://i.ibb.co/cSjgfRKB/IMG-20260515-113326.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="mailto:jasmintopup@gmail.com" className="text-pink-700 hover:underline font-medium">jasmintopup@gmail.com</a> },
             { icon: <Image src="https://i.ibb.co/8Lx3whbn/1000073661-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "ប្រទេសកម្ពុជា" },
           ].map(({ icon, label }, i) => (

@@ -10,6 +10,7 @@ import {
   logPaymentValidationFailure,
   validatePaymentForOrder,
 } from "@/lib/payment-validation";
+import { notifyAndMaybeDeliverPaidOrder } from "@/lib/order-fulfillment";
 
 /**
  * Admin-only payment refresh.
@@ -49,7 +50,7 @@ export const POST = withAdminAuth(async (
   let updated = order;
   if (isRemotePaid(remote)) {
     const validation = validatePaymentForOrder(order, {
-      orderNumber: order.orderNumber,
+      orderNumber: remote.orderNumber || order.orderNumber,
       transactionId: remote.transactionId ?? order.paymentRef,
       amount: remote.amount,
       currency: remote.currency,
@@ -89,6 +90,7 @@ export const POST = withAdminAuth(async (
     }
 
     updated = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
+    await notifyAndMaybeDeliverPaidOrder(order.id);
     await writeAudit({
       action: "order.khpay_refresh.auto_paid",
       targetType: "order",

@@ -8,7 +8,6 @@ import {
   logPaymentValidationFailure,
   validatePaymentForOrder,
 } from "@/lib/payment-validation";
-import { logSecurityEvent } from "@/lib/secureLogger";
 
 /**
  * Public order lookup.
@@ -96,16 +95,6 @@ export async function GET(
         detail: error instanceof Error ? error.message : "public sync failed",
       });
     }
-  } else if (
-    process.env.NODE_ENV === "production" &&
-    order.status === "PENDING" &&
-    order.paymentRef &&
-    !order.paymentRef.startsWith("SIM-")
-  ) {
-    logSecurityEvent({
-      event: "payment_public_sync_blocked",
-      detail: `production public order lookup is read-only; order=${order.orderNumber}`,
-    });
   }
 
   // Determine if payment info is safe to expose

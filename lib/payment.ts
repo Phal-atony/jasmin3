@@ -31,6 +31,7 @@ export type KhpayStatusResult = {
   status: string;
   paid: boolean;
   transactionId?: string;
+  orderNumber?: string;
   amount?: string;
   currency?: string;
 };
@@ -123,6 +124,117 @@ async function readJsonOrText(res: Response): Promise<any> {
   } catch {
     return { raw: text.slice(0, 300) };
   }
+}
+
+
+function asCleanString(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const text = String(value).trim();
+  return text ? text : undefined;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getFirstKnownValue(obj: unknown, keys: string[], maxDepth = 5): unknown {
+  if (!isPlainObject(obj) || maxDepth < 0) return undefined;
+
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = obj[key];
+      if (value !== null && value !== undefined && String(value).trim() !== "") {
+        return value;
+      }
+    }
+  }
+
+  for (const value of Object.values(obj)) {
+    if (isPlainObject(value)) {
+      const found = getFirstKnownValue(value, keys, maxDepth - 1);
+      if (found !== undefined) return found;
+    }
+  }
+
+  return undefined;
+}
+
+const PAID_STATUS_WORDS = ["paid", "approved", "success", "succeeded", "completed"];
+const FAILED_STATUS_WORDS = ["failed", "failure", "cancelled", "canceled", "expired", "rejected", "declined"];
+
+function normalizeProviderStatus(value: unknown): string {
+  const raw = asCleanString(value)?.toLowerCase() ?? "pending";
+  return raw.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "pending";
+}
+
+function statusLooksPaid(status: string): boolean {
+  const normalized = normalizeProviderStatus(status);
+  const words = normalized.split("_").filter(Boolean);
+
+  if (words.some((word) => FAILED_STATUS_WORDS.includes(word))) return false;
+  return words.some((word) => PAID_STATUS_WORDS.includes(word));
+}
+
+function booleanFlag(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "1", "yes", "paid", "approved", "success"].includes(normalized);
+  }
+  if (typeof value === "number") return value === 1;
+  return false;
+}
+
+function extractKhpayStatusPayload(json: any, fallbackTransactionId: string): KhpayStatusResult {
+  const data = isPlainObject(json?.data) ? json.data : json;
+
+  const rawStatus =
+    getFirstKnownValue(data, [
+      "payment_status",
+      "paymentStatus",
+      "transaction_status",
+      "transactionStatus",
+      "status",
+      "state",
+    ]) ?? "pending";
+
+  const status = normalizeProviderStatus(rawStatus);
+  const paidFlag =
+    booleanFlag(getFirstKnownValue(data, ["paid", "is_paid", "isPaid", "approved", "success_paid"])) ||
+    statusLooksPaid(status);
+
+  const transactionId =
+    asCleanString(
+      getFirstKnownValue(data, [
+        "transaction_id",
+        "transactionId",
+        "transactionID",
+        "txn_id",
+        "txnId",
+        "payment_ref",
+        "paymentRef",
+        "reference",
+      ])
+    ) ?? fallbackTransactionId;
+
+  const orderNumber = asCleanString(
+    getFirstKnownValue(data, ["order_number", "orderNumber", "orderNo", "merchant_order_id", "merchantOrderId"])
+  )?.toUpperCase();
+
+  const amount = asCleanString(
+    getFirstKnownValue(data, ["amount", "amount_usd", "amountUsd", "total", "total_amount", "totalAmount"])
+  );
+
+  const currency = asCleanString(getFirstKnownValue(data, ["currency", "currency_code", "currencyCode"]))?.toUpperCase();
+
+  return {
+    status,
+    paid: paidFlag,
+    transactionId,
+    orderNumber,
+    amount,
+    currency,
+  };
 }
 
 function formatKhpayError(status: number, payload: any): string {
@@ -227,14 +339,14 @@ export async function fetchKhpayStatus(transactionId: string): Promise<KhpayStat
     return null;
   }
 
-  console.log(`[khpay] check ${transactionId}:`, JSON.stringify(json.data));
-  return {
-    status: String(json.data.status || "pending"),
-    paid: Boolean(json.data.paid),
-    transactionId: json.data.transaction_id ? String(json.data.transaction_id) : transactionId,
-    amount: json.data.amount,
-    currency: json.data.currency,
-  };
+  const status = extractKhpayStatusPayload(json, transactionId);
+  console.log(`[khpay] check ${transactionId}:`, JSON.stringify({
+    status: status.status,
+    paid: status.paid,
+    hasAmount: !!status.amount,
+    currency: status.currency,
+  }));
+  return status;
 }
 
 export function verifyWebhook(
@@ -249,28 +361,33 @@ export function verifyWebhook(
     return false;
   }
 
-  // KHPay sends: X-KHPay-Signature: t=<timestamp>,v1=<hmac_hex>
-  const received = headers["x-khpay-signature"] || "";
+  // KHPay commonly sends: X-KHPay-Signature: t=<timestamp>,v1=<hmac_hex>.
+  // Keep support for plain hex signatures too, but still require a valid HMAC.
+  const received =
+    headers["x-khpay-signature"] ||
+    headers["khpay-signature"] ||
+    headers["x-webhook-signature"] ||
+    headers["x-signature"] ||
+    headers["signature"] ||
+    "";
   if (!received) return false;
 
-  // Extract v1 value from "t=1234,v1=abcdef..."
-  const v1Match = received.match(/v1=([a-f0-9]+)/i);
-  if (!v1Match) return false;
-  const receivedHmac = v1Match[1];
+  const signatureMatch = received.match(/v1=([a-f0-9]+)/i) || received.match(/^([a-f0-9]{32,128})$/i);
+  if (!signatureMatch) return false;
+  const receivedHmac = signatureMatch[1];
 
-  // Extract timestamp and build signed payload: "t=<timestamp>.<rawBody>"
   const tMatch = received.match(/t=(\d+)/);
   const timestamp = tMatch ? tMatch[1] : "";
-  const signedPayload = timestamp ? `${timestamp}.${rawBody}` : rawBody;
+  const signedPayloads = timestamp ? [`${timestamp}.${rawBody}`, rawBody] : [rawBody];
 
-  const expectedHmac = crypto
-    .createHmac("sha256", secret)
-    .update(signedPayload)
-    .digest("hex");
+  return signedPayloads.some((signedPayload) => {
+    const expectedHmac = crypto
+      .createHmac("sha256", secret)
+      .update(signedPayload)
+      .digest("hex");
 
-  // Use fixed-length Buffers so timingSafeEqual never throws.
-  const a = Buffer.from(receivedHmac.padEnd(expectedHmac.length, "\0"));
-  const b = Buffer.from(expectedHmac);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+    const a = Buffer.from(receivedHmac.padEnd(expectedHmac.length, "\0"));
+    const b = Buffer.from(expectedHmac);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  });
 }

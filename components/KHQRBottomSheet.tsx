@@ -7,8 +7,11 @@ import {
   CheckCircle2,
   RefreshCw,
   Clock3,
+  Copy,
+  ExternalLink,
+  Check,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type OrderPayment = {
   orderNumber: string;
@@ -52,6 +55,14 @@ export default function KHQRBottomSheet({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [refreshing, setRefreshing] = useState(false);
+  const [copiedOrder, setCopiedOrder] = useState(false);
+
+  const paymentPollBusyRef = useRef(false);
+  const paymentPollStartedAtRef = useRef(Date.now());
+
+  const orderPageUrl = `/order?orderNumber=${encodeURIComponent(
+    currentOrder.orderNumber
+  )}`;
 
   const expireValue =
     currentOrder.expiresAt ?? currentOrder.paymentExpiresAt ?? null;
@@ -68,6 +79,26 @@ export default function KHQRBottomSheet({
     (!isPaid(currentOrder.status) &&
       expiresMs !== null &&
       now >= expiresMs);
+
+  async function copyOrderNumber() {
+    try {
+      await navigator.clipboard.writeText(currentOrder.orderNumber);
+    } catch {
+      const input = document.createElement("input");
+      input.value = currentOrder.orderNumber;
+      input.setAttribute("readonly", "true");
+      input.style.position = "absolute";
+      input.style.left = "-9999px";
+
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
+
+    setCopiedOrder(true);
+    window.setTimeout(() => setCopiedOrder(false), 1800);
+  }
 
   // ✅ Generate QR locally
   useEffect(() => {
@@ -129,14 +160,22 @@ export default function KHQRBottomSheet({
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ IMPORTANT FIX:
-  // Keep polling even when QR expired.
-  // Stop only after paid/success.
+  // ✅ Safe payment polling for the bottom-sheet flow
   useEffect(() => {
     if (isPaid(currentOrder.status)) return;
 
-    const timer = setInterval(async () => {
+    async function pollPaymentStatus() {
+      if (paymentPollBusyRef.current) return;
+      paymentPollBusyRef.current = true;
+
       try {
+        await fetch(
+          `/api/orders/${encodeURIComponent(
+            currentOrder.orderNumber
+          )}/sync-payment`,
+          { method: "POST", cache: "no-store" }
+        ).catch(() => null);
+
         const res = await fetch(
           `/api/orders/${encodeURIComponent(currentOrder.orderNumber)}`,
           { cache: "no-store" }
@@ -145,18 +184,27 @@ export default function KHQRBottomSheet({
         if (!res.ok) return;
 
         const data = await res.json();
-
-        // Optional debug
-        console.log("KHQR order status:", data.status, {
-          isExpired: data.isExpired,
-          canPay: data.canPay,
-        });
-
         setCurrentOrder(data);
       } catch {
-        // ignore polling error
+        // Webhook remains the primary payment path; polling is a safe fallback.
+      } finally {
+        paymentPollBusyRef.current = false;
       }
-    }, 3000);
+    }
+
+    void pollPaymentStatus();
+
+    const timer = setInterval(() => {
+      const pollingTooLong =
+        Date.now() - paymentPollStartedAtRef.current > 10 * 60 * 1000;
+
+      if (pollingTooLong) {
+        clearInterval(timer);
+        return;
+      }
+
+      void pollPaymentStatus();
+    }, 10000);
 
     return () => clearInterval(timer);
   }, [currentOrder.orderNumber, currentOrder.status]);
@@ -300,9 +348,39 @@ export default function KHQRBottomSheet({
               ការទូទាត់បានជោគជ័យ!
             </h3>
 
-            <p className="mt-2 text-sm text-gray-500">
-              Order: {currentOrder.orderNumber}
-            </p>
+            <div className="mt-5 rounded-2xl border border-pink-100 bg-pink-50 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-pink-500">
+                Order Number
+              </p>
+
+              <p className="mt-1 break-all font-mono text-base font-black text-gray-900">
+                {currentOrder.orderNumber}
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={copyOrderNumber}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-pink-200 bg-white px-4 py-3 text-sm font-extrabold text-pink-600 shadow-sm transition hover:bg-pink-50 active:scale-[0.99]"
+              >
+                {copiedOrder ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+
+                {copiedOrder ? "Copied" : "Copy Order"}
+              </button>
+
+              <a
+                href={orderPageUrl}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-pink-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-pink-200 transition hover:scale-[1.01] active:scale-[0.99]"
+              >
+                Go to Order
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
           </div>
         ) : expired ? (
           <div key="expired" className="animate-slide-up px-7 py-10 text-center">
@@ -335,13 +413,47 @@ export default function KHQRBottomSheet({
                   </span>
                 </div>
               )}
+
+              <div className="mt-3 border-t border-pink-100 pt-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-pink-500">
+                  Order Number
+                </p>
+
+                <p className="mt-1 break-all font-mono text-sm font-black text-gray-900">
+                  {currentOrder.orderNumber}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={copyOrderNumber}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-pink-200 bg-white px-4 py-3 text-sm font-extrabold text-pink-600 shadow-sm transition hover:bg-pink-50 active:scale-[0.99]"
+              >
+                {copiedOrder ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+
+                {copiedOrder ? "Copied" : "Copy Order"}
+              </button>
+
+              <a
+                href={orderPageUrl}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-100 px-4 py-3 text-sm font-extrabold text-pink-700 transition hover:bg-pink-200 active:scale-[0.99]"
+              >
+                Go to Order
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
 
             <button
               type="button"
               onClick={handleRefreshSameOrder}
               disabled={refreshing}
-              className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-pink-500 px-5 py-3.5 text-base font-extrabold text-white shadow-lg shadow-pink-200 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-pink-500 px-5 py-3.5 text-base font-extrabold text-white shadow-lg shadow-pink-200 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
             >
               {refreshing ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -384,6 +496,40 @@ export default function KHQRBottomSheet({
               <p className="mt-3 text-lg font-bold text-gray-900">
                 Scan to Pay
               </p>
+
+              <div className="mt-4 w-full rounded-2xl border border-pink-100 bg-pink-50 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-pink-500">
+                  Order Number
+                </p>
+
+                <p className="mt-1 break-all font-mono text-sm font-black text-gray-900">
+                  {currentOrder.orderNumber}
+                </p>
+              </div>
+
+              <div className="mt-4 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={copyOrderNumber}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-pink-200 bg-white px-4 py-3 text-sm font-extrabold text-pink-600 shadow-sm transition hover:bg-pink-50 active:scale-[0.99]"
+                >
+                  {copiedOrder ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+
+                  {copiedOrder ? "Copied" : "Copy Order"}
+                </button>
+
+                <a
+                  href={orderPageUrl}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-100 px-4 py-3 text-sm font-extrabold text-pink-700 transition hover:bg-pink-200 active:scale-[0.99]"
+                >
+                  Go to Order
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
 
               <p className="my-2 text-gray-400">or</p>
 

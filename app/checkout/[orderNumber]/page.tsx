@@ -433,6 +433,19 @@ export default function CheckoutPage() {
     }
   }, [orderNumber]);
 
+  const syncPaymentThenFetchOrder = useCallback(async () => {
+    try {
+      await fetch(`/api/orders/${encodeURIComponent(orderNumber)}/sync-payment`, {
+        method: "POST",
+        cache: "no-store",
+      });
+    } catch {
+      // Webhook is still the primary payment path; sync is a safe fallback.
+    }
+
+    return fetchOrder();
+  }, [orderNumber, fetchOrder]);
+
   useEffect(() => {
     setLoading(true);
     fetchOrder().finally(() => setLoading(false));
@@ -449,9 +462,9 @@ export default function CheckoutPage() {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       return;
     }
-    pollRef.current = setInterval(() => { fetchOrder(); }, 3000);
+    pollRef.current = setInterval(() => { syncPaymentThenFetchOrder(); }, 5000);
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
-  }, [orderExists, orderStatus, fetchOrder]);
+  }, [orderExists, orderStatus, syncPaymentThenFetchOrder]);
 
   // Countdown — uses paymentExpiresAt from API; falls back to createdAt + 5 min.
   const expiresAt = order?.paymentExpiresAt;

@@ -2,15 +2,15 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 import { verifyWebhook, PaymentMethod } from "@/lib/payment";
-import { notifyTelegram, escapeHtml } from "@/lib/telegram";
 import { NextRequest, NextResponse } from "next/server";
 import { logSecurityEvent } from "@/lib/secureLogger";
-import { sendTopup } from "@/lib/supplier";
 import { getClientIp } from "@/lib/getIp";
 import {
+  isRemotePaid,
   logPaymentValidationFailure,
   validatePaymentForOrder,
 } from "@/lib/payment-validation";
+import { notifyAndMaybeDeliverPaidOrder } from "@/lib/order-fulfillment";
 
 function getPayloadData(payload: any): any {
   return payload?.data && typeof payload.data === "object" ? payload.data : payload;
@@ -25,7 +25,7 @@ function getWebhookOrderNumber(payload: any, data: any): string {
       payload?.order_number ??
       payload?.orderNumber ??
       ""
-  ).trim();
+  ).trim().toUpperCase();
 }
 
 function getWebhookTransactionId(payload: any, data: any): string {
@@ -38,6 +38,89 @@ function getWebhookTransactionId(payload: any, data: any): string {
   ).trim();
 }
 
+
+function getKnownValue(obj: any, keys: string[], depth = 4): any {
+  if (!obj || typeof obj !== "object" || depth < 0) return undefined;
+
+  for (const key of keys) {
+    const value = obj[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return value;
+    }
+  }
+
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const found = getKnownValue(value, keys, depth - 1);
+      if (found !== undefined) return found;
+    }
+  }
+
+  return undefined;
+}
+
+function getWebhookStatus(payload: any, data: any): string {
+  return String(
+    getKnownValue(data, [
+      "payment_status",
+      "paymentStatus",
+      "transaction_status",
+      "transactionStatus",
+      "status",
+      "state",
+    ]) ??
+      getKnownValue(payload, ["payment_status", "paymentStatus", "transaction_status", "transactionStatus", "status", "state"]) ??
+      ""
+  ).trim().toLowerCase();
+}
+
+function getWebhookAmount(payload: any, data: any): string | number | null {
+  return (
+    getKnownValue(data, ["amount", "amount_usd", "amountUsd", "total", "total_amount", "totalAmount"]) ??
+    getKnownValue(payload, ["amount", "amount_usd", "amountUsd", "total", "total_amount", "totalAmount"]) ??
+    null
+  );
+}
+
+function getWebhookCurrency(payload: any, data: any): string | null {
+  const value =
+    getKnownValue(data, ["currency", "currency_code", "currencyCode"]) ??
+    getKnownValue(payload, ["currency", "currency_code", "currencyCode"]);
+  return value === undefined || value === null ? null : String(value).trim().toUpperCase();
+}
+
+function webhookPaidFlag(payload: any, data: any): boolean {
+  const value =
+    getKnownValue(data, ["paid", "is_paid", "isPaid", "approved", "success_paid"]) ??
+    getKnownValue(payload, ["paid", "is_paid", "isPaid", "approved", "success_paid"]);
+
+  if (value === true) return true;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "paid", "approved", "success"].includes(value.trim().toLowerCase());
+  }
+  if (typeof value === "number") return value === 1;
+  return false;
+}
+
+function normalizeWebhookEvent(payload: any, data: any): "paid" | "expired" | "failed" | "ignored" {
+  const declaredEvent = String(payload.event || payload.type || "").trim().toLowerCase();
+  const providerStatus = getWebhookStatus(payload, data);
+
+  if (["payment.paid", "payment.approved", "paid", "approved", "success", "completed"].includes(declaredEvent)) {
+    return "paid";
+  }
+  if (["payment.expired", "expired"].includes(declaredEvent)) return "expired";
+  if (["payment.failed", "failed", "declined", "rejected", "cancelled", "canceled"].includes(declaredEvent)) {
+    return "failed";
+  }
+
+  if (isRemotePaid({ status: providerStatus, paid: webhookPaidFlag(payload, data) })) return "paid";
+  if (["expired"].includes(providerStatus)) return "expired";
+  if (["failed", "declined", "rejected", "cancelled", "canceled"].includes(providerStatus)) return "failed";
+
+  return "ignored";
+}
+
 function isPrismaUniqueError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -45,73 +128,6 @@ function isPrismaUniqueError(error: unknown): boolean {
     "code" in error &&
     (error as { code?: string }).code === "P2002"
   );
-}
-
-async function notifyAndMaybeDeliver(fullOrder: NonNullable<Awaited<ReturnType<typeof getPaidOrderForFulfillment>>>) {
-  const baseUrl = process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "";
-  const link = baseUrl
-    ? `\n<a href="${baseUrl}/admin/orders/${fullOrder.orderNumber}">Open in admin</a>`
-    : "";
-
-  await notifyTelegram(
-    `💰 <b>New paid order</b>\n` +
-      `<b>#${escapeHtml(fullOrder.orderNumber)}</b>\n` +
-      `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-      `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-      `Amount: $${fullOrder.amountUsd.toFixed(2)}${link}`
-  );
-
-  if (fullOrder.product.supplierCode) {
-    const topupResult = await sendTopup({
-      game: fullOrder.game.slug,
-      uid: fullOrder.playerUid,
-      serverId: fullOrder.serverId ?? undefined,
-      productCode: fullOrder.product.supplierCode,
-      orderRef: fullOrder.orderNumber,
-    });
-
-    if (topupResult.success) {
-      await prisma.order.update({
-        where: { id: fullOrder.id },
-        data: {
-          status: "DELIVERED",
-          deliveredAt: new Date(),
-          deliveryNote: `Auto-delivered via CamRapid. TXN: ${topupResult.transactionId ?? "N/A"}`,
-        },
-      });
-
-      await notifyTelegram(
-        `✅ <b>Auto topup DELIVERED</b>\n` +
-          `#${escapeHtml(fullOrder.orderNumber)}\n` +
-          `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-          `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-          `CamRapid TXN: <code>${escapeHtml(topupResult.transactionId ?? "N/A")}</code>`
-      );
-    } else {
-      await notifyTelegram(
-        `⚠️ <b>Auto topup FAILED — process manually</b>\n` +
-          `#${escapeHtml(fullOrder.orderNumber)}\n` +
-          `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-          `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-          `Error: ${escapeHtml(topupResult.error ?? "unknown")}${link}`
-      );
-    }
-  } else {
-    await notifyTelegram(
-      `🔔 <b>Manual topup required</b>\n` +
-        `#${escapeHtml(fullOrder.orderNumber)}\n` +
-        `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-        `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-        `(Product has no supplier code)${link}`
-    );
-  }
-}
-
-async function getPaidOrderForFulfillment(orderId: string) {
-  return prisma.order.findUnique({
-    where: { id: orderId },
-    include: { game: true, product: true },
-  });
 }
 
 export async function POST(
@@ -149,12 +165,13 @@ export async function POST(
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const event = String(payload.event || payload.type || "").trim().toLowerCase();
     const data = getPayloadData(payload);
+    const event = normalizeWebhookEvent(payload, data);
+    const providerStatus = getWebhookStatus(payload, data);
     const transactionId = getWebhookTransactionId(payload, data);
     const orderNumber = getWebhookOrderNumber(payload, data);
 
-    if (!["payment.paid", "payment.approved", "payment.expired", "payment.failed"].includes(event)) {
+    if (event === "ignored") {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
@@ -177,13 +194,13 @@ export async function POST(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    if (event === "payment.paid" || event === "payment.approved") {
+    if (event === "paid") {
       const validation = validatePaymentForOrder(order, {
         orderNumber,
         transactionId,
-        amount: data?.amount,
-        currency: data?.currency,
-        status: "paid",
+        amount: getWebhookAmount(payload, data),
+        currency: getWebhookCurrency(payload, data),
+        status: providerStatus || "approved",
         paid: true,
       });
 
@@ -247,7 +264,7 @@ export async function POST(
       }
 
       if (fullOrder) {
-        await notifyAndMaybeDeliver(fullOrder);
+        await notifyAndMaybeDeliverPaidOrder(fullOrder.id);
       }
     } else {
       if (!order.paymentRef || order.paymentRef !== transactionId) {
@@ -272,7 +289,7 @@ export async function POST(
             await tx.order.update({
               where: { id: order.id },
               data: {
-                status: event === "payment.expired" ? "CANCELLED" : "FAILED",
+                status: event === "expired" ? "CANCELLED" : "FAILED",
                 failureReason: `KHPay: ${event}`,
               },
             });

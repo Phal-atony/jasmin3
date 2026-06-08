@@ -10,7 +10,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5 mb-3">
               <Image
-                src="https://i.ibb.co/mVYkHDYL/file-000000009d3871faa1dcdb1b67a3b6f5.png"
+                src="https://i.ibb.co/cKr3gptJ/jasmintopup-logo-no-bg-transparent.png"
                 alt="Logo"
                 width={40}
                 height={40}

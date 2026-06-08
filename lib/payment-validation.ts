@@ -76,11 +76,19 @@ export function amountsMatch(
 
 export function isRemotePaid(remote: RemotePaymentSnapshot | null | undefined): boolean {
   if (!remote) return false;
-  const status = String(remote.status ?? "").trim().toLowerCase();
-  return (
-    remote.paid === true ||
-    ["paid", "approved", "success", "succeeded", "completed"].includes(status)
-  );
+
+  const normalizedStatus = String(remote.status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  const words = normalizedStatus.split("_").filter(Boolean);
+  const failedWords = ["failed", "failure", "cancelled", "canceled", "expired", "rejected", "declined"];
+  const paidWords = ["paid", "approved", "success", "succeeded", "completed"];
+
+  if (words.some((word) => failedWords.includes(word))) return false;
+  return remote.paid === true || words.some((word) => paidWords.includes(word));
 }
 
 export function validatePaymentForOrder(
