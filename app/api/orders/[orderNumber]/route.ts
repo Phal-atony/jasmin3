@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
+import { logSecurityEvent } from "@/lib/secureLogger"; 
 
 import { NextRequest, NextResponse } from "next/server";
 import { fetchKhpayStatus } from "@/lib/payment";
