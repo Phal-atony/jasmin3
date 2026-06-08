@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { notifyTelegram, escapeHtml } from "@/lib/telegram";
-import { sendTopup } from "@/lib/supplier";
+import { fulfillPaidOrder } from "@/lib/fulfillment";
 
 /**
  * Runs post-payment work after an order safely transitions to PAID.
- * This function must only be called after strict provider verification has
- * already matched transaction reference, amount, currency, and order identity.
+ *
+ * This keeps the NEW strict payment verification flow, but uses the OLD working
+ * top-up delivery method:
+ *   PAID -> PROCESSING -> CamRapidSecure /Create_Orders.php -> DELIVERED
  */
 export async function notifyAndMaybeDeliverPaidOrder(orderId: string) {
   const fullOrder = await prisma.order.findUnique({
@@ -28,50 +30,5 @@ export async function notifyAndMaybeDeliverPaidOrder(orderId: string) {
       `Amount: $${fullOrder.amountUsd.toFixed(2)}${link}`
   );
 
-  if (fullOrder.product.supplierCode) {
-    const topupResult = await sendTopup({
-      game: fullOrder.game.slug,
-      uid: fullOrder.playerUid,
-      serverId: fullOrder.serverId ?? undefined,
-      productCode: fullOrder.product.supplierCode,
-      orderRef: fullOrder.orderNumber,
-    });
-
-    if (topupResult.success) {
-      await prisma.order.update({
-        where: { id: fullOrder.id },
-        data: {
-          status: "DELIVERED",
-          deliveredAt: new Date(),
-          deliveryNote: `Auto-delivered via CamRapid. TXN: ${topupResult.transactionId ?? "N/A"}`,
-        },
-      });
-
-      await notifyTelegram(
-        `✅ <b>Auto topup DELIVERED</b>\n` +
-          `#${escapeHtml(fullOrder.orderNumber)}\n` +
-          `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-          `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-          `CamRapid TXN: <code>${escapeHtml(topupResult.transactionId ?? "N/A")}</code>`
-      );
-    } else {
-      await notifyTelegram(
-        `⚠️ <b>Auto topup FAILED — process manually</b>\n` +
-          `#${escapeHtml(fullOrder.orderNumber)}\n` +
-          `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-          `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-          `Error: ${escapeHtml(topupResult.error ?? "unknown")}${link}`
-      );
-    }
-  } else {
-    await notifyTelegram(
-      `🔔 <b>Manual topup required</b>\n` +
-        `#${escapeHtml(fullOrder.orderNumber)}\n` +
-        `${escapeHtml(fullOrder.game.name)} – ${escapeHtml(fullOrder.product.name)}\n` +
-        `UID: <code>${escapeHtml(fullOrder.playerUid)}</code>\n` +
-        `(Product has no supplier code)${link}`
-    );
-  }
-
-  return fullOrder;
+  return fulfillPaidOrder(fullOrder.orderNumber);
 }
