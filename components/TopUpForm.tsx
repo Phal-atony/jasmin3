@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { isValidUid, isValidServerId, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
-import { QrCode, ArrowRight, Lock, Check, Smartphone, Search, UserRoundCheck, AlertCircle, Tag, Loader2, X } from "lucide-react";
+import { QrCode, ArrowRight, Lock, Check, Smartphone, Search, UserRoundCheck, AlertCircle, Tag, Loader2,  } from "lucide-react";
 import KHQRBottomSheet from "@/components/KHQRBottomSheet";
 
 // Games that support automatic nickname lookup via /api/lookup-uid
@@ -672,15 +672,7 @@ export default function TopUpForm({ game, products }: { game: Game; products: Pr
       {!dismissed && (
         <div className="relative lg:hidden card p-5 sticky bottom-3 mt-8 border border-pink-400/30 shadow-2xl shadow-pink-300/10 backdrop-blur-md">
 
-          {/* Close button */}
-          <button
-            type="button"
-            onClick={dismissBar}
-            aria-label="Close"
-            className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-pink-100 text-pink-400 hover:bg-pink-200 hover:text-pink-600 transition-colors"
-          >
-            <X className="h-4 w-4" strokeWidth={2.5} />
-          </button>
+          
 
           {selectedProduct && (
             <div className="flex justify-between items-center mb-4 pr-8">
