@@ -7,8 +7,9 @@ import { getClientIp } from "@/lib/getIp";
 import { prisma } from "@/lib/prisma";
 import { applyRateLimit } from "@/lib/rateLimit";
 import { logSecurityEvent } from "@/lib/secureLogger";
-import { ADMIN_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
+import { ADMIN_COOKIE_NAME } from "@/lib/auth";
 import { getLockDurationMs, formatLockDuration } from "@/lib/lockPolicy";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,6 +17,7 @@ export const runtime = "nodejs";
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  turnstileToken: z.string().min(1),
 });
 
 const PENDING_2FA_COOKIE = "admin_2fa_pending";
@@ -31,42 +33,76 @@ function get2FATtlSeconds() {
   const ttl = Number(
     process.env.ADMIN_2FA_TTL_SECONDS || DEFAULT_2FA_TTL_SECONDS
   );
-  if (!Number.isFinite(ttl) || ttl <= 0) return DEFAULT_2FA_TTL_SECONDS;
+
+  if (!Number.isFinite(ttl) || ttl <= 0) {
+    return DEFAULT_2FA_TTL_SECONDS;
+  }
+
   return Math.floor(ttl);
 }
 
 // ── GET: check login lock status ─────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get("email");
-  if (!email) return NextResponse.json({ locked: false });
+
+  if (!email) {
+    return NextResponse.json(
+      { locked: false },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
   const identifier = `admin-login:${email.toLowerCase().trim()}`;
-  const lock = await prisma.adminAuthLock.findUnique({ where: { identifier } });
 
-  if (!lock) return NextResponse.json({ locked: false });
+  const lock = await prisma.adminAuthLock.findUnique({
+    where: { identifier },
+  });
 
-  // Backward-compat: respect legacy forever locks already in the DB.
-  if (lock.forever) return NextResponse.json({ locked: true, forever: true });
+  if (!lock) {
+    return NextResponse.json(
+      { locked: false },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  if (lock.forever) {
+    return NextResponse.json(
+      { locked: true, forever: true },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
   if (lock.lockedUntil && lock.lockedUntil > new Date()) {
     const remainingMs = lock.lockedUntil.getTime() - Date.now();
-    return NextResponse.json({
-      locked: true,
-      forever: false,
-      lockedUntil: lock.lockedUntil,
-      retryAfter: formatLockDuration(remainingMs),
-    });
+
+    return NextResponse.json(
+      {
+        locked: true,
+        forever: false,
+        lockedUntil: lock.lockedUntil,
+        retryAfter: formatLockDuration(remainingMs),
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
 
-  return NextResponse.json({ locked: false });
+  return NextResponse.json(
+    { locked: false },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 // ── POST: password login → issues pending-2FA cookie ─────────────────────────
 export async function POST(req: NextRequest) {
-  // Rate limit: 10 attempts per IP per 15 minutes
-  const ip =
-    getClientIp(req);
-  const rl = await applyRateLimit(`admin-login:${ip}`, 10, 15 * 60 * 1000, ip);
+  const ip = getClientIp(req);
+
+  const rl = await applyRateLimit(
+    `admin-login:${ip}`,
+    10,
+    15 * 60 * 1000,
+    ip
+  );
+
   if (rl) return rl;
 
   try {
@@ -81,13 +117,34 @@ export async function POST(req: NextRequest) {
     }
 
     const email = parsed.data.email.toLowerCase().trim();
+
+    // ✅ Turnstile verify BEFORE checking password / DB-sensitive logic
+    const turnstileOk = await verifyTurnstileToken({
+      req,
+      token: parsed.data.turnstileToken,
+      kind: "admin",
+      expectedAction: "admin_login",
+    });
+
+    if (!turnstileOk) {
+      logSecurityEvent({
+        event: "admin_login_fail",
+        ip,
+        detail: `turnstile_failed:${email}`,
+      });
+
+      return NextResponse.json(
+        { error: "Security verification failed. Please refresh and try again." },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
     const identifier = `admin-login:${email}`;
 
     const lock = await prisma.adminAuthLock.findUnique({
       where: { identifier },
     });
 
-    // Backward-compat: respect legacy forever locks already in DB.
     if (lock?.forever) {
       return NextResponse.json(
         { error: "Account is disabled. Contact the site owner." },
@@ -97,9 +154,12 @@ export async function POST(req: NextRequest) {
 
     if (lock?.lockedUntil && lock.lockedUntil > new Date()) {
       const remainingMs = lock.lockedUntil.getTime() - Date.now();
+
       return NextResponse.json(
         {
-          error: `Too many failed attempts. Please try again in ${formatLockDuration(remainingMs)}.`,
+          error: `Too many failed attempts. Please try again in ${formatLockDuration(
+            remainingMs
+          )}.`,
           lockedUntil: lock.lockedUntil,
           retryAfter: formatLockDuration(remainingMs),
         },
@@ -107,28 +167,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const admin = await prisma.admin.findUnique({ where: { email } });
+    const admin = await prisma.admin.findUnique({
+      where: { email },
+    });
 
-    // Always run bcrypt even for unknown email to prevent timing attacks.
+    // Always run bcrypt even for unknown email to reduce timing differences.
     const DUMMY_HASH =
-      "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345";
+      "$2a$10$CwTycUXWue0Thq9StjUM0uJ8qqYv1.F9s7EuZWmhDgL4P4YJb3R1W";
+
     const candidateHash = admin?.passwordHash ?? DUMMY_HASH;
+
     const passwordMatch = await bcrypt.compare(
       parsed.data.password,
       candidateHash
     );
 
     if (!admin || !admin.active || !passwordMatch) {
-      // Use the existing failCount if there's a lock record, else 0.
       const result = await handleLoginFail(
         identifier,
         lock?.failCount ?? 0,
         ip
       );
+
       const remainingMs = result.lockedUntil.getTime() - Date.now();
+
       return NextResponse.json(
         {
-          error: `Invalid credentials. Please try again in ${formatLockDuration(remainingMs)}.`,
+          error: `Invalid credentials. Please try again in ${formatLockDuration(
+            remainingMs
+          )}.`,
           lockedUntil: result.lockedUntil,
           retryAfter: formatLockDuration(remainingMs),
         },
@@ -137,9 +204,12 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Password correct — clear lock, issue pending-2FA token
-    await prisma.adminAuthLock.deleteMany({ where: { identifier } });
+    await prisma.adminAuthLock.deleteMany({
+      where: { identifier },
+    });
 
     const ttlSeconds = get2FATtlSeconds();
+
     const pendingToken = jwt.sign(
       {
         type: "admin-2fa-pending",
@@ -161,6 +231,7 @@ export async function POST(req: NextRequest) {
     );
 
     const isProduction = process.env.NODE_ENV === "production";
+
     res.cookies.set(PENDING_2FA_COOKIE, pendingToken, {
       httpOnly: true,
       secure: isProduction,
@@ -172,6 +243,7 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (error) {
     console.error("Admin login error:", error);
+
     return NextResponse.json(
       { error: "Something went wrong" },
       { status: 500, headers: { "Cache-Control": "no-store" } }
@@ -205,17 +277,13 @@ export async function DELETE() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Increments the fail counter and applies a progressive temporary lock.
- * Never sets forever=true — manual disable is done via Admin.active field.
- */
 async function handleLoginFail(
   identifier: string,
   currentFailCount: number,
   ip: string
 ) {
-  const nextFail    = currentFailCount + 1;
-  const durationMs  = getLockDurationMs(nextFail);
+  const nextFail = currentFailCount + 1;
+  const durationMs = getLockDurationMs(nextFail);
   const lockedUntil = new Date(Date.now() + durationMs);
 
   logSecurityEvent({
@@ -228,8 +296,17 @@ async function handleLoginFail(
 
   await prisma.adminAuthLock.upsert({
     where: { identifier },
-    update: { failCount: nextFail, lockedUntil, forever: false },
-    create: { identifier, failCount: nextFail, lockedUntil, forever: false },
+    update: {
+      failCount: nextFail,
+      lockedUntil,
+      forever: false,
+    },
+    create: {
+      identifier,
+      failCount: nextFail,
+      lockedUntil,
+      forever: false,
+    },
   });
 
   return { lockedUntil };

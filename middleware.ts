@@ -33,9 +33,14 @@ const VALID_ADMIN_PREFIXES = [
 
 function isValidAdminPath(pathname: string): boolean {
   if (pathname === ADMIN_HOME_PATH) return true;
+
   return VALID_ADMIN_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
+}
+
+function isAdminArea(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin");
 }
 
 function getSecret() {
@@ -70,31 +75,31 @@ function generateNonce(): string {
 }
 
 function buildCspHeader(nonce: string, isProduction: boolean): string {
+  const turnstile = "https://challenges.cloudflare.com";
+
   const scriptSrc = isProduction
-    ? `'self' 'nonce-${nonce}'`
-    : `'self' 'unsafe-inline' 'unsafe-eval'`;
+    ? `'self' 'nonce-${nonce}' ${turnstile}`
+    : `'self' 'unsafe-inline' 'unsafe-eval' ${turnstile}`;
 
   const styleSrc = isProduction
     ? `'self' 'nonce-${nonce}' https://fonts.googleapis.com`
     : `'self' 'unsafe-inline' https://fonts.googleapis.com`;
 
   const connectSrc = isProduction
-    ? `'self' https:`
-    : `'self' http://localhost:* ws://localhost:* wss: https:`;
+    ? `'self' https: ${turnstile}`
+    : `'self' http://localhost:* ws://localhost:* wss: https: ${turnstile}`;
 
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     `style-src ${styleSrc}`,
     "font-src 'self' data: https://fonts.gstatic.com",
-    [
-      "img-src",
-      "'self'",
-      "data:",
-      "blob:",
-      "https:",
-    ].join(" "),
+    "img-src 'self' data: blob: https:",
     `connect-src ${connectSrc}`,
+
+    // ✅ Required for Cloudflare Turnstile iframe
+    `frame-src 'self' ${turnstile}`,
+
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -144,7 +149,6 @@ export async function middleware(req: NextRequest) {
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
-  requestHeaders.set("Content-Security-Policy", cspHeader);
 
   function nextResponse(): NextResponse {
     return addSecurityHeaders(
@@ -175,6 +179,12 @@ export async function middleware(req: NextRequest) {
       nonce,
       isProduction
     );
+  }
+
+  // ✅ For normal pages like homepage, only apply CSP/security headers.
+  // Do not waste time verifying admin JWT.
+  if (!isAdminArea(pathname)) {
+    return nextResponse();
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
@@ -218,7 +228,7 @@ export async function middleware(req: NextRequest) {
     return redirectResponse(new URL(ADMIN_LOGIN_PATH, req.url));
   }
 
-  // ✅ Not logged in + UNKNOWN admin path (e.g. /admin/ssdsd) → honeypot, not real login
+  // ✅ Not logged in + UNKNOWN admin path → honeypot, not real login
   if (!isLoggedIn && pathname.startsWith("/admin")) {
     return redirectResponse(new URL(HONEY_PATH, req.url));
   }
@@ -228,5 +238,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    /*
+      Apply CSP/security headers to normal pages and API routes,
+      but skip Next.js static/image assets and common static files.
+    */
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml)$).*)",
+  ],
 };
