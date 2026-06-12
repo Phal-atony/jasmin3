@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Backward-compat: respect legacy forever locks already in the DB.
   if (lock.forever) {
     return NextResponse.json(
       { locked: true, forever: true },
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
+  // Rate limit: 10 attempts per IP per 15 minutes
   const rl = await applyRateLimit(
     `admin-login:${ip}`,
     10,
@@ -116,8 +118,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const email = parsed.data.email.toLowerCase().trim();
-
     // ✅ Turnstile verify BEFORE checking password / DB-sensitive logic
     const turnstileOk = await verifyTurnstileToken({
       req,
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
       logSecurityEvent({
         event: "admin_login_fail",
         ip,
-        detail: `turnstile_failed:${email}`,
+        detail: parsed.data.email.toLowerCase().trim(),
       });
 
       return NextResponse.json(
@@ -139,12 +139,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const email = parsed.data.email.toLowerCase().trim();
     const identifier = `admin-login:${email}`;
 
     const lock = await prisma.adminAuthLock.findUnique({
       where: { identifier },
     });
 
+    // Backward-compat: respect legacy forever locks already in DB.
     if (lock?.forever) {
       return NextResponse.json(
         { error: "Account is disabled. Contact the site owner." },
@@ -172,6 +174,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Always run bcrypt even for unknown email to reduce timing differences.
+    // This is a valid bcrypt hash for dummy comparison only.
     const DUMMY_HASH =
       "$2a$10$CwTycUXWue0Thq9StjUM0uJ8qqYv1.F9s7EuZWmhDgL4P4YJb3R1W";
 
@@ -206,6 +209,12 @@ export async function POST(req: NextRequest) {
     // ✅ Password correct — clear lock, issue pending-2FA token
     await prisma.adminAuthLock.deleteMany({
       where: { identifier },
+    });
+
+    logSecurityEvent({
+      event: "admin_password_success_pending_2fa",
+      ip,
+      detail: email,
     });
 
     const ttlSeconds = get2FATtlSeconds();
@@ -277,6 +286,10 @@ export async function DELETE() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Increments the fail counter and applies a progressive temporary lock.
+ * Never sets forever=true — manual disable is done via Admin.active field.
+ */
 async function handleLoginFail(
   identifier: string,
   currentFailCount: number,

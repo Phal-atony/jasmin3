@@ -15,6 +15,8 @@ import { signAdminToken, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
 import { applyRateLimit } from "@/lib/rateLimit";
 import { logSecurityEvent } from "@/lib/secureLogger";
 import { getLockDurationMs, formatLockDuration } from "@/lib/lockPolicy";
+import { notifyTelegram, escapeHtml } from "@/lib/telegram";
+import { getRequestInfo, detectProvider } from "@/lib/requestInfo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -233,6 +235,37 @@ export async function POST(req: NextRequest) {
       where: { id: payload.adminId },
       data:  { lastLoginAt: new Date() },
     });
+    const info = getRequestInfo(req);
+    const provider = detectProvider(null);
+
+    await prisma.adminLoginLog.create({
+  data: {
+    adminEmail: payload.email,
+    ip: info.ip,
+    country: info.country,
+    isp: null,
+    provider,
+    device: info.device,
+    os: info.os,
+    browser: info.browser,
+    userAgent: info.userAgent,
+  },
+});
+
+await notifyTelegram(
+  [
+    "🚨 <b>have someone login admin page</b>",
+    "",
+    `<b>Admin:</b> ${escapeHtml(payload.email)}`,
+    `<b>IP:</b> ${escapeHtml(info.ip)}`,
+    `<b>Country:</b> ${escapeHtml(info.country || "Unknown")}`,
+    `<b>Provider:</b> ${escapeHtml(provider)}`,
+    `<b>Device:</b> ${escapeHtml(info.device)}`,
+    `<b>OS:</b> ${escapeHtml(info.os)}`,
+    `<b>Browser:</b> ${escapeHtml(info.browser)}`,
+    `<b>Time:</b> ${escapeHtml(new Date().toLocaleString("en-US", { timeZone: "Asia/Phnom_Penh" }))}`,
+  ].join("\n")
+);
 
     // Record the used token so it cannot be replayed within the 90-second window
     const tokenExpiresAt = new Date(Date.now() + 90 * 1000);

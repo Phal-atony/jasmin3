@@ -1,10 +1,15 @@
-// Prisma schema for RITHTOPUP
-// Local dev: sqlite (file:./dev.db)
-// Production (Vercel/Neon): change provider to "postgresql" and run `prisma db push`
+// Prisma schema for  JASMINTOPUP
+// Database: PostgreSQL / Neon / Vercel
+// After edit run:
+// npx prisma format
+// npx prisma db push
+// npx prisma generate
+
 generator client {
-  provider      = "prisma-client-js"
-  // Vercel lambdas run on Amazon Linux 2023 (openssl 3.0). Without this the
-  // generated engine binary won't load in production.
+  provider = "prisma-client-js"
+
+  // Vercel lambdas run on Amazon Linux 2023 (openssl 3.0).
+  // Without this the generated engine binary may fail in production.
   binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
@@ -14,44 +19,43 @@ datasource db {
 }
 
 model Game {
-  id          String    @id @default(cuid())
-  slug        String    @unique
-  name        String
-  publisher   String
-  description String?
-  imageUrl    String
-  bannerUrl   String?
-  currencyName String   // e.g. "Diamonds", "UC", "Genesis Crystals"
-  uidLabel    String   @default("Player ID")
-  uidExample  String?  // e.g. "12345678 (1234)"
-  requiresServer Boolean @default(false)
-  // JSON-encoded string array (SQLite has no native array type)
-  servers     String    @default("[]")
-  featured    Boolean   @default(false)
-  active      Boolean   @default(true)
-  sortOrder   Int       @default(0)
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  name           String
+  publisher      String
+  description    String?
+  imageUrl       String
+  bannerUrl      String?
+  currencyName   String
+  uidLabel       String    @default("Player ID")
+  uidExample     String?
+  requiresServer Boolean   @default(false)
+  servers        String    @default("[]")
+  featured       Boolean   @default(false)
+  active         Boolean   @default(true)
+  sortOrder      Int       @default(0)
   seoTitle       String?
   seoDescription String?
-  products    Product[]
-  orders      Order[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  products       Product[]
+  orders         Order[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  gameId      String
-  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  name        String   // e.g. "86 Diamonds"
-  amount      Int      // 86
-  bonus       Int      @default(0) // bonus diamonds
-  priceUsd    Float    // price in USD
-  priceKhr    Float?   // price in Cambodian Riel (optional auto-calc)
-  badge       String?  // "Best Value", "Hot", "New"
-  imageUrl    String?
+  id           String   @id @default(cuid())
+  gameId       String
+  game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  name         String
+  amount       Int
+  bonus        Int      @default(0)
+  priceUsd     Float
+  priceKhr     Float?
+  badge        String?
+  imageUrl     String?
   active       Boolean  @default(true)
   sortOrder    Int      @default(0)
-  supplierCode String?  // CamRapidSecure product code e.g. "FF_100_DIA" — required for auto topup
+  supplierCode String?
   orders       Order[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -60,37 +64,37 @@ model Product {
 }
 
 model Order {
-  id             String       @id @default(cuid())
-  orderNumber    String       @unique // human-friendly: RT-XXXXXX
-  gameId         String
-  game           Game         @relation(fields: [gameId], references: [id])
-  productId      String
-  product        Product      @relation(fields: [productId], references: [id])
-  playerUid      String
-  serverId       String?
-  playerNickname String?      // optional nickname pulled after validation
-  customerEmail  String?
-  customerPhone  String?
-  amountUsd      Float
-  amountKhr      Float?
-  currency       String       @default("USD")
-  paymentMethod  String       // ABA_PAY | BINANCE_PAY | MANUAL
-  paymentRef     String?      @unique // gateway transaction id; one provider transaction can pay only one order
-  paymentUrl     String?      // redirect URL from gateway
-  qrString       String?      // KHQR EMV payload (for on-site display)
-  paymentExpiresAt DateTime?  // QR/payment expiry time
-  status         String       @default("PENDING") // PENDING | PAID | PROCESSING | DELIVERED | FAILED | REFUNDED | CANCELLED
-  deliveryNote   String?      // admin notes about delivery
-  failureReason  String?
-  ipAddress      String?
-  userAgent      String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  paidAt         DateTime?
-  deliveredAt    DateTime?
-  promoCodeId    String?
-  promoCode      PromoCode? @relation(fields: [promoCodeId], references: [id])
-  discountUsd    Float      @default(0)
+  id               String     @id @default(cuid())
+  orderNumber      String     @unique
+  gameId           String
+  game             Game       @relation(fields: [gameId], references: [id])
+  productId        String
+  product          Product    @relation(fields: [productId], references: [id])
+  playerUid        String
+  serverId         String?
+  playerNickname   String?
+  customerEmail    String?
+  customerPhone    String?
+  amountUsd        Float
+  amountKhr        Float?
+  currency         String     @default("USD")
+  paymentMethod    String
+  paymentRef       String?    @unique
+  paymentUrl       String?
+  qrString         String?
+  paymentExpiresAt DateTime?
+  status           String     @default("PENDING")
+  deliveryNote     String?
+  failureReason    String?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  paidAt           DateTime?
+  deliveredAt      DateTime?
+  promoCodeId      String?
+  promoCode        PromoCode? @relation(fields: [promoCodeId], references: [id])
+  discountUsd      Float      @default(0)
 
   @@index([status])
   @@index([createdAt])
@@ -100,10 +104,10 @@ model Order {
 model PromoCode {
   id            String    @id @default(cuid())
   code          String    @unique
-  discountType  String    // PERCENT | FIXED
-  discountValue Float     // e.g. 10 for 10% or 0.50 for $0.50
+  discountType  String
+  discountValue Float
   minOrderUsd   Float     @default(0)
-  maxUses       Int       @default(0) // 0 = unlimited
+  maxUses       Int       @default(0)
   usedCount     Int       @default(0)
   expiresAt     DateTime?
   active        Boolean   @default(true)
@@ -113,35 +117,38 @@ model PromoCode {
 }
 
 model Admin {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   name         String?
-  role         String    @default("ADMIN") // ADMIN | SUPERADMIN
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  role         String    @default("ADMIN")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
-  totpSecret   String?   // TOTP secret for authenticator app 2FA (Issue #1)
-
+  totpSecret   String?
 }
 
 model Settings {
-  id                 Int      @id @default(1)
-  telegramBotToken   String?
-  updatedAt          DateTime @updatedAt
-  siteName           String   @default("JASMIN TOPUP")
-  exchangeRate       Float    @default(4100)
-  supportTelegram    String?
-  supportEmail       String?
-  maintenanceMode    Boolean  @default(false)
-  maintenanceMessage String?
-  announcement       String?
-  announcementTone   String?
-  telegramChatId     String?
+  id               Int      @id @default(1)
+  telegramBotToken String?
+  telegramChatId   String?
+  updatedAt        DateTime @updatedAt
 
-  logoUrl            String?
-  logoText           String?
-  logoTagline        String?
+  siteName     String @default("JASMIN TOPUP")
+  exchangeRate Float  @default(4100)
+
+  supportTelegram String?
+  supportEmail    String?
+
+  maintenanceMode    Boolean @default(false)
+  maintenanceMessage String?
+
+  announcement     String?
+  announcementTone String?
+
+  logoUrl     String?
+  logoText    String?
+  logoTagline String?
 }
 
 model HeroBanner {
@@ -173,7 +180,7 @@ model BlogPost {
   slug        String    @unique
   title       String
   excerpt     String?
-  content     String    // plain text / lightweight HTML
+  content     String
   coverUrl    String?
   tag         String?
   published   Boolean   @default(false)
@@ -187,10 +194,10 @@ model BlogPost {
 model AuditLog {
   id         String   @id @default(cuid())
   adminEmail String?
-  action     String   // e.g. order.mark_paid, banner.create, game.update
-  targetType String?  // order | game | banner | faq | blog | banlist | settings
+  action     String
+  targetType String?
   targetId   String?
-  details    String?  // JSON-encoded metadata
+  details    String?
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
@@ -199,14 +206,16 @@ model AuditLog {
 
 model BlockedIdentity {
   id        String   @id @default(cuid())
-  type      String   // email | phone | ip | uid
+  type      String
   value     String
   reason    String?
   createdAt DateTime @default(now())
 
   @@unique([type, value])
+  @@index([type])
+  @@index([value])
+  @@index([createdAt])
 }
-
 
 model AdminAuthLock {
   id          String    @id @default(cuid())
@@ -218,9 +227,92 @@ model AdminAuthLock {
   updatedAt   DateTime  @updatedAt
 }
 
-// ── Security additions ────────────────────────────────────────────────────────
+// ── Security Dashboard Additions ──────────────────────────────────────────────
 
-/// Stores processed webhook transaction IDs to prevent replay attacks (Issue #9)
+model IpProfile {
+  id String @id @default(cuid())
+  ip String @unique
+
+  country String?
+  city    String?
+  region  String?
+
+  // Example: AS38623 VIETTEL CAMBODIA PTE., LTD
+  isp String?
+
+  // Example: Smart | Metfone | Cellcard | Ezecom | Unknown
+  provider String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider])
+  @@index([country])
+  @@index([updatedAt])
+}
+
+model RequestLog {
+  id String @id @default(cuid())
+
+  ip         String
+  method     String?
+  path       String
+  statusCode Int?
+
+  country  String?
+  isp      String?
+  provider String?
+
+  device    String?
+  os        String?
+  browser   String?
+  userAgent String?
+  referer   String?
+
+  blocked   Boolean @default(false)
+  isBot     Boolean @default(false)
+  riskScore Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([ip])
+  @@index([path])
+  @@index([provider])
+  @@index([blocked])
+  @@index([isBot])
+  @@index([riskScore])
+  @@index([createdAt])
+}
+
+model AdminLoginLog {
+  id String @id @default(cuid())
+
+  adminEmail String?
+  ip         String
+
+  country  String?
+  isp      String?
+  provider String?
+
+  device    String?
+  os        String?
+  browser   String?
+  userAgent String?
+
+  success Boolean @default(true)
+  message String?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminEmail])
+  @@index([ip])
+  @@index([provider])
+  @@index([success])
+  @@index([createdAt])
+}
+
+// ── Existing Security Additions ───────────────────────────────────────────────
+
 model ProcessedWebhookEvent {
   id            String   @id @default(cuid())
   transactionId String   @unique
@@ -230,7 +322,6 @@ model ProcessedWebhookEvent {
   @@index([processedAt])
 }
 
-/// DB-backed rate limit entries (Issue #4)
 model RateLimitEntry {
   id        String   @id @default(cuid())
   key       String
@@ -238,6 +329,7 @@ model RateLimitEntry {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+  @@index([ip])
 }
 
 model UsedTotpToken {
@@ -248,4 +340,6 @@ model UsedTotpToken {
   createdAt DateTime @default(now())
 
   @@unique([adminId, token])
+  @@index([adminId])
+  @@index([expiresAt])
 }

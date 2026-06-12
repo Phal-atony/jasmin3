@@ -24,7 +24,9 @@ type SecurityEvent =
   | "payment_validation_failed"
   | "rate_limit_exceeded"
   | "upload_rejected"
-  | "admin_logout";
+  | "admin_logout"
+  | "admin_turnstile_fail"
+  | "admin_password_success_pending_2fa";
 
 interface LogPayload {
   event: SecurityEvent;

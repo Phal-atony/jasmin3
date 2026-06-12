@@ -375,7 +375,7 @@ export default function AdminLoginPage() {
               {/* Password */}
               <div className="mb-5">
                 <label className="block text-xs font-medium text-[#b06080] mb-2">
-               លេខសម្ងាត់
+                  លេខសម្ងាត់
                 </label>
                 <div className="relative">
                   <input
