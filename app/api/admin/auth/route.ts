@@ -9,7 +9,6 @@ import { applyRateLimit } from "@/lib/rateLimit";
 import { logSecurityEvent } from "@/lib/secureLogger";
 import { ADMIN_COOKIE_NAME } from "@/lib/auth";
 import { getLockDurationMs, formatLockDuration } from "@/lib/lockPolicy";
-import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,7 +16,6 @@ export const runtime = "nodejs";
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  turnstileToken: z.string().min(1),
 });
 
 const PENDING_2FA_COOKIE = "admin_2fa_pending";
@@ -114,27 +112,6 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid credentials" },
-        { status: 400, headers: { "Cache-Control": "no-store" } }
-      );
-    }
-
-    // ✅ Turnstile verify BEFORE checking password / DB-sensitive logic
-    const turnstileOk = await verifyTurnstileToken({
-      req,
-      token: parsed.data.turnstileToken,
-      kind: "admin",
-      expectedAction: "admin_login",
-    });
-
-    if (!turnstileOk) {
-      logSecurityEvent({
-        event: "admin_login_fail",
-        ip,
-        detail: parsed.data.email.toLowerCase().trim(),
-      });
-
-      return NextResponse.json(
-        { error: "Security verification failed. Please refresh and try again." },
         { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }

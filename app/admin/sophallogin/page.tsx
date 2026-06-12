@@ -4,8 +4,6 @@ import Image from "next/image";
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import TurnstileWidget from "@/components/TurnstileWidget";
-
 // Font 'Kantumruy Pro' is imported in globals.css via Google Fonts.
 // class "font-khmer" is defined there too.
 
@@ -22,15 +20,6 @@ export default function AdminLoginPage() {
   const [banned, setBanned] = useState(false);
   const [lockedUntil, setLockedUntil] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState<string>("");
-
-  // ✅ Turnstile state
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
-
-  function resetTurnstile() {
-    setTurnstileToken("");
-    setTurnstileResetKey((v) => v + 1);
-  }
 
   // ✅ Countdown timer សម្រាប់ lock 5 នាទី
   useEffect(() => {
@@ -106,11 +95,6 @@ export default function AdminLoginPage() {
     e.preventDefault();
     if (isLocked || loading) return;
 
-    if (!turnstileToken) {
-      setError("សូមរង់ចាំការផ្ទៀងផ្ទាត់សុវត្ថិភាពមួយភ្លែត។");
-      return;
-    }
-
     setError(null);
     setLoading(true);
 
@@ -124,7 +108,6 @@ export default function AdminLoginPage() {
         body: JSON.stringify({
           email: email.trim(),
           password,
-          turnstileToken,
         }),
       });
 
@@ -160,7 +143,6 @@ export default function AdminLoginPage() {
       setError(err instanceof Error ? err.message : "មានបញ្ហាក្នុងការចូល");
     } finally {
       setLoading(false);
-      resetTurnstile();
     }
   }
 
@@ -202,7 +184,6 @@ export default function AdminLoginPage() {
           setStep("login");
           setPassword("");
           setCode("");
-          resetTurnstile();
         }
 
         return;
@@ -231,7 +212,6 @@ export default function AdminLoginPage() {
     setError(null);
     setBanned(false);
     setLockedUntil(null);
-    resetTurnstile();
 
     try {
       await fetch("/api/admin/auth", {
@@ -439,31 +419,12 @@ export default function AdminLoginPage() {
                 </div>
               )}
 
-              {/* ✅ Invisible Turnstile for admin login */}
-              {!isLocked && (
-                <TurnstileWidget
-                  key={turnstileResetKey}
-                  kind="admin"
-                  action="admin_login"
-                  size="invisible"
-                  onVerify={(token) => {
-                    setTurnstileToken(token);
-
-                    if (error === "សូមរង់ចាំការផ្ទៀងផ្ទាត់សុវត្ថិភាពមួយភ្លែត។") {
-                      setError(null);
-                    }
-                  }}
-                  onError={() => {
-                    setTurnstileToken("");
-                    setError("Turnstile verification failed. សូម refresh ហើយសាកល្បងម្តងទៀត។");
-                  }}
-                />
-              )}
+              {/* Turnstile removed */}
 
               <button
                 type="submit"
                 className={submitBtnCls}
-                disabled={loading || isLocked || !turnstileToken}
+                disabled={loading || isLocked}
               >
                 {loading ? (
                   <>
@@ -474,8 +435,6 @@ export default function AdminLoginPage() {
                   "🔒 គណនីត្រូវបានផ្អាកជាអចិន្ត្រៃយ៍"
                 ) : lockedUntil ? (
                   `⏳ Lock ${countdown}`
-                ) : !turnstileToken ? (
-                  "កំពុងផ្ទៀងផ្ទាត់សុវត្ថិភាព…"
                 ) : (
                   "🔑 ចូលគណនី"
                 )}
