@@ -40,7 +40,11 @@ function isValidAdminPath(pathname: string): boolean {
 }
 
 function isAdminArea(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin");
+  return (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname.startsWith("/api/admin")
+  );
 }
 
 function getSecret() {
@@ -81,8 +85,12 @@ function buildCspHeader(nonce: string, isProduction: boolean): string {
     ? `'self' 'nonce-${nonce}' ${turnstile}`
     : `'self' 'unsafe-inline' 'unsafe-eval' ${turnstile}`;
 
+  // ✅ FIX:
+  // Your site uses React/Next inline styles like style={...}.
+  // Production CSP with only nonce blocks style attributes.
+  // So we allow inline CSS styles, but keep JavaScript strict.
   const styleSrc = isProduction
-    ? `'self' 'nonce-${nonce}' https://fonts.googleapis.com`
+    ? `'self' 'unsafe-inline' https://fonts.googleapis.com`
     : `'self' 'unsafe-inline' https://fonts.googleapis.com`;
 
   const connectSrc = isProduction
@@ -91,21 +99,35 @@ function buildCspHeader(nonce: string, isProduction: boolean): string {
 
   return [
     "default-src 'self'",
+
+    // ✅ Keep JavaScript protected
     `script-src ${scriptSrc}`,
+
+    // ✅ Fix CSP inline style errors
     `style-src ${styleSrc}`,
+    "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src-attr 'unsafe-inline'",
+
+    // ✅ Google Fonts
     "font-src 'self' data: https://fonts.gstatic.com",
+
+    // ✅ Images from your site, data URLs, blobs, and HTTPS storage/CDN
     "img-src 'self' data: blob: https:",
+
+    // ✅ API / Turnstile / external HTTPS calls
     `connect-src ${connectSrc}`,
 
     // ✅ Required for Cloudflare Turnstile iframe
     `frame-src 'self' ${turnstile}`,
 
+    // ✅ Security hardening
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
     "manifest-src 'self'",
     "worker-src 'self' blob:",
+
     isProduction ? "upgrade-insecure-requests" : "",
   ]
     .filter(Boolean)
@@ -181,8 +203,8 @@ export async function middleware(req: NextRequest) {
     );
   }
 
-  // ✅ For normal pages like homepage, only apply CSP/security headers.
-  // Do not waste time verifying admin JWT.
+  // ✅ Normal pages: only apply CSP/security headers.
+  // No need to verify admin JWT outside admin area.
   if (!isAdminArea(pathname)) {
     return nextResponse();
   }
@@ -228,7 +250,7 @@ export async function middleware(req: NextRequest) {
     return redirectResponse(new URL(ADMIN_LOGIN_PATH, req.url));
   }
 
-  // ✅ Not logged in + UNKNOWN admin path → honeypot, not real login
+  // ✅ Not logged in + unknown admin path → honeypot, not real login
   if (!isLoggedIn && pathname.startsWith("/admin")) {
     return redirectResponse(new URL(HONEY_PATH, req.url));
   }
