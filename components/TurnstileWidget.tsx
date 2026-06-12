@@ -24,12 +24,14 @@ export default function TurnstileWidget({
   onVerify,
   onError,
   className,
+  size = "normal",
 }: {
   kind: TurnstileKind;
   action: string;
   onVerify?: (token: string) => void;
   onError?: () => void;
   className?: string;
+  size?: "normal" | "compact" | "invisible";
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -60,6 +62,7 @@ export default function TurnstileWidget({
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         action,
+        size,
         callback: (token: string) => {
           onVerifyRef.current?.(token);
         },
@@ -100,7 +103,7 @@ export default function TurnstileWidget({
         widgetIdRef.current = null;
       }
     };
-  }, [siteKey, action]);
+  }, [siteKey, action, size]);
 
   if (!siteKey) return null;
 

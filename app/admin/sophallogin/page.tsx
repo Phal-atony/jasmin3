@@ -439,26 +439,25 @@ export default function AdminLoginPage() {
                 </div>
               )}
 
-              {/* ✅ Managed Turnstile for admin login */}
+              {/* ✅ Invisible Turnstile for admin login */}
               {!isLocked && (
-                <div className="mb-5 flex justify-center">
-                  <TurnstileWidget
-                    key={turnstileResetKey}
-                    kind="admin"
-                    action="admin_login"
-                    onVerify={(token) => {
-                      setTurnstileToken(token);
+                <TurnstileWidget
+                  key={turnstileResetKey}
+                  kind="admin"
+                  action="admin_login"
+                  size="invisible"
+                  onVerify={(token) => {
+                    setTurnstileToken(token);
 
-                      if (error === "សូមរង់ចាំការផ្ទៀងផ្ទាត់សុវត្ថិភាពមួយភ្លែត។") {
-                        setError(null);
-                      }
-                    }}
-                    onError={() => {
-                      setTurnstileToken("");
-                      setError("Turnstile verification failed. សូម refresh ហើយសាកល្បងម្តងទៀត។");
-                    }}
-                  />
-                </div>
+                    if (error === "សូមរង់ចាំការផ្ទៀងផ្ទាត់សុវត្ថិភាពមួយភ្លែត។") {
+                      setError(null);
+                    }
+                  }}
+                  onError={() => {
+                    setTurnstileToken("");
+                    setError("Turnstile verification failed. សូម refresh ហើយសាកល្បងម្តងទៀត។");
+                  }}
+                />
               )}
 
               <button
