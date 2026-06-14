@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type NavItem = {
   href: string;
   label: string;
-  icon: JSX.Element;
+  icon: ReactNode;
   helper: string;
 };
 
