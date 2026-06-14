@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import AdminClickSound from "@/components/AdminClickSound";
+import AdminMouseEffect from "@/components/AdminMouseEffect";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -242,6 +243,7 @@ export default function AdminLoginPage() {
   return (
     <main className="admin-login-page font-khmer relative min-h-screen overflow-hidden bg-[#ffe9f3] px-4 py-8 text-[#5a1232] sm:px-6">
       <AdminClickSound />
+      <AdminMouseEffect />
       <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(255,103,173,0.32),transparent_33%),radial-gradient(circle_at_86%_68%,rgba(255,70,152,0.24),transparent_31%),linear-gradient(135deg,#fff7fb_0%,#ffe3f0_45%,#ffcde4_100%)]" />
         <div className="absolute -left-28 -top-28 h-[430px] w-[430px] rounded-full bg-white/20 shadow-[inset_0_0_55px_rgba(255,255,255,0.8)] blur-[1px]" />

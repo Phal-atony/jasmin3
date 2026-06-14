@@ -42,7 +42,7 @@ function installClickSound() {
   const pool = Array.from({ length: POOL_SIZE }, () => {
     const audio = new Audio(SOUND_SRC);
     audio.preload = "auto";
-    audio.volume = 0.62;
+    audio.volume = 1.0;
     return audio;
   });
 

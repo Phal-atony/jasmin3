@@ -608,3 +608,24 @@ body {
     animation: none !important;
   }
 }
+
+/* ─────────────────────────────────────────────
+   Admin mouse trail: smooth fading pink cursor effect
+   ───────────────────────────────────────────── */
+.admin-mouse-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  touch-action: none;
+  mix-blend-mode: normal;
+  contain: layout paint size;
+}
+
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .admin-mouse-canvas {
+    display: none;
+  }
+}
