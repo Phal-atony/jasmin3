@@ -331,10 +331,10 @@ const sections = [
         </p>
         <div className="rounded-2xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-white p-5 space-y-3">
           {[
-            { icon: <Image src="https://i.ibb.co/cKr3gptJ/jasmintopup-logo-no-bg-transparent.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "JASMINTOPUP" },
-            { icon: <Image src="https://i.ibb.co/0px31m4Q/1000073671-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="https://www.jasmintopup.site" className="text-pink-700 hover:underline font-medium">jasmin2.onrender.com</a> },
-            { icon: <Image src="https://i.ibb.co/cSjgfRKB/IMG-20260515-113326.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: <a href="mailto:jasmintopup@gmail.com" className="text-pink-700 hover:underline font-medium">jasmintopup@gmail.com</a> },
-            { icon: <Image src="https://i.ibb.co/8Lx3whbn/1000073661-removebg-preview.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "ប្រទេសកម្ពុជា" },
+            { icon: <Image src="/jasmintopup-logo.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />, label: "JASMINTOPUP" },
+            { icon: <span aria-hidden="true">🌐</span>, label: <a href="https://www.jasmintopup.site" className="text-pink-700 hover:underline font-medium">www.jasmintopup.site</a> },
+            { icon: <span aria-hidden="true">✉️</span>, label: <a href="mailto:jasmintopup@gmail.com" className="text-pink-700 hover:underline font-medium">jasmintopup@gmail.com</a> },
+            { icon: <span aria-hidden="true">🇰🇭</span>, label: "ប្រទេសកម្ពុជា" },
           ].map(({ icon, label }, i) => (
             <div key={i} className="flex items-center gap-3 text-sm">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-pink-100 text-base shrink-0">{icon}</span>
@@ -347,108 +347,179 @@ const sections = [
   },
 ];
 
+const privacyHighlights = [
+  { title: "ទិន្នន័យ Order", value: "ការពារដោយ HTTPS", icon: "🧾" },
+  { title: "ការទូទាត់", value: "KHQR / Transaction Ref", icon: "💎" },
+  { title: "Support", value: "ឆ្លើយតបក្នុង ៧ ថ្ងៃ", icon: "💬" },
+];
+
 export default function PrivacyPolicyPage() {
   return (
     <>
       <Header />
 
-      {/* Hero */}
-      <div
-        className="relative overflow-hidden py-14 px-4 text-center"
-        style={{ background: "linear-gradient(135deg,#e91e8c 0%,#ff6eb4 60%,#ffb3d9 100%)" }}
-      >
-        <div className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 20% 50%,rgba(255,255,255,.18) 0%,transparent 60%)," +
-              "radial-gradient(ellipse at 80% 20%,rgba(255,255,255,.12) 0%,transparent 50%)",
-          }}
-        />
-        <div className="relative">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <Image
-              src="https://i.ibb.co/vxB50Vwr/IMG-20260515-114538.png"
-              alt="JASMINTOPUP"
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-full object-cover border-2 border-white/60"
-            />
-            <span className="font-display text-xl font-bold text-white tracking-wide">JASMINTOPUP</span>
-          </div>
-          <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-2 drop-shadow">
-            គោលការណ៍ឯកជនភាព
-          </h1>
-          <p className="text-white/80 text-sm">Privacy Policy</p>
-          <span className="mt-4 inline-block rounded-full border border-white/40 bg-white/20 px-4 py-1 text-xs text-white">
-            កែប្រែចុងក្រោយ: {LAST_UPDATED}
-          </span>
-        </div>
-      </div>
-
-      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-
-        {/* Back buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <Link
-            href="/"
-            className="flex-1 text-center bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold py-3.5 rounded-2xl shadow-md hover:shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all text-sm"
-          >
-            🏠 ត្រឡប់ទៅទំព័រដើម
-          </Link>
-          <Link
-            href="/order"
-            className="flex-1 text-center bg-white border-2 border-pink-400 text-pink-600 font-bold py-3.5 rounded-2xl shadow-sm hover:bg-pink-50 transition-all text-sm"
-          >
-            📦 តាមដានការបញ្ជាទិញ
-          </Link>
+      <main className="relative overflow-hidden bg-[linear-gradient(180deg,#fff1f7_0%,#fff7fb_45%,#ffffff_100%)]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-28 top-16 h-72 w-72 rounded-full bg-pink-300/25 blur-3xl" />
+          <div className="absolute right-[-6rem] top-64 h-80 w-80 rounded-full bg-fuchsia-300/20 blur-3xl" />
+          <div className="absolute left-1/2 top-[34rem] h-64 w-64 -translate-x-1/2 rounded-full bg-rose-200/25 blur-3xl" />
+          <div className="dot-pattern absolute inset-x-0 top-0 h-[34rem] opacity-40" />
         </div>
 
-        {/* TOC */}
-        <div className="mb-8 rounded-2xl border-2 border-pink-200 bg-white p-6">
-          <p className="text-xs uppercase tracking-widest text-pink-500 font-extrabold mb-3">មាតិកា</p>
-          <ol className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-6 text-sm list-decimal list-inside">
-            {sections.map((s) => (
-              <li key={s.id}>
-                <a href={`#${s.id}`} className="text-pink-700 hover:text-pink-500 hover:underline transition-colors">
-                  {s.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        {/* Sections */}
-        <div className="space-y-4">
-          {sections.map((s) => (
-            <div
-              key={s.id}
-              id={s.id}
-              className="rounded-2xl border-2 border-pink-200 bg-white p-6 scroll-mt-6 transition-all duration-300 hover:border-pink-400/50 hover:shadow-lg hover:shadow-pink-300/10"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-extrabold text-white text-sm shadow-md shadow-pink-300/40"
-                  style={{ background: "linear-gradient(135deg,#e91e8c,#ff6eb4)" }}
-                >
-                  {s.num}
-                </div>
-                <h2 className="font-display text-lg font-extrabold text-pink-800">{s.title}</h2>
+        <section className="relative mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+          <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="fade-up">
+              <div className="inline-flex items-center gap-3 rounded-full border border-pink-200 bg-white/80 px-4 py-2 shadow-sm shadow-pink-100 backdrop-blur-md">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-pink-600">🔒</span>
+                <span className="text-xs font-black uppercase tracking-[0.26em] text-pink-500">Privacy Policy</span>
               </div>
-              <div className="text-pink-700 leading-relaxed text-[15px]">{s.content}</div>
-            </div>
-          ))}
-        </div>
 
-        {/* Back to top */}
-        <div className="mt-10 text-center">
-          <a
-            href="#"
-            className="inline-flex items-center gap-2 rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-pink-300/40 transition hover:bg-pink-700 hover:-translate-y-0.5"
-          >
-            ត្រឡប់ទៅខាងលើ
-          </a>
-        </div>
-      </section>
+              <h1 className="mt-5 max-w-3xl font-display text-4xl font-black leading-tight text-pink-950 sm:text-5xl lg:text-6xl">
+                គោលការណ៍ឯកជនភាព
+                <span className="mt-2 block bg-gradient-to-r from-pink-500 via-fuchsia-500 to-rose-400 bg-clip-text text-transparent">
+                  JASMINTOPUP
+                </span>
+              </h1>
+
+              <p className="mt-4 max-w-2xl text-sm font-semibold leading-8 text-pink-800/70 sm:text-base">
+                យើងពន្យល់យ៉ាងច្បាស់ពីរបៀបប្រមូល ប្រើប្រាស់ រក្សាទុក និងការពារព័ត៌មានរបស់អ្នក
+                ពេលប្រើប្រាស់សេវាកម្ម top-up របស់ JASMINTOPUP។
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-fuchsia-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-pink-300/40 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-pink-300/60 active:scale-[0.98]"
+                >
+                  🏠 ត្រឡប់ទៅទំព័រដើម
+                </Link>
+                <Link
+                  href="/order"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-pink-300 bg-white/85 px-5 py-3 text-sm font-black text-pink-600 shadow-sm shadow-pink-100 transition-all duration-300 hover:-translate-y-0.5 hover:bg-pink-50 active:scale-[0.98]"
+                >
+                  🔎 តាមដានការបញ្ជាទិញ
+                </Link>
+              </div>
+            </div>
+
+            <div className="fade-up rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-2xl shadow-pink-200/40 backdrop-blur-2xl sm:p-6" style={{ animationDelay: "120ms" }}>
+              <div className="rounded-[1.6rem] border border-pink-100 bg-gradient-to-br from-white via-pink-50/80 to-white p-5">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.5rem] border border-pink-100 bg-white p-2 shadow-lg shadow-pink-200/50">
+                    <Image
+                      src="/jasmintopup-logo.png"
+                      alt="JASMINTOPUP"
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-contain"
+                      priority
+                    />
+                  </span>
+                  <div>
+                    <p className="text-xl font-black text-pink-950">JASMINTOPUP</p>
+                    <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.24em] text-pink-400">Instant · Secure · 24/7</p>
+                    <span className="mt-3 inline-flex rounded-full border border-pink-200 bg-white px-3 py-1 text-xs font-bold text-pink-600">
+                      កែប្រែចុងក្រោយ: {LAST_UPDATED}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                  {privacyHighlights.map((item) => (
+                    <div key={item.title} className="rounded-2xl border border-pink-100 bg-white/80 p-4 shadow-sm shadow-pink-100/70">
+                      <div className="text-2xl">{item.icon}</div>
+                      <p className="mt-2 text-xs font-black text-pink-900">{item.title}</p>
+                      <p className="mt-1 text-[11px] font-semibold leading-5 text-pink-500">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="relative mx-auto grid max-w-7xl gap-6 px-4 pb-14 pt-4 sm:px-6 lg:grid-cols-[280px_1fr] lg:px-8">
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 rounded-[1.7rem] border border-pink-100 bg-white/78 p-4 shadow-xl shadow-pink-100/50 backdrop-blur-2xl">
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.26em] text-pink-400">មាតិកា</p>
+              <nav className="max-h-[calc(100vh-9rem)] space-y-1 overflow-auto pr-1">
+                {sections.map((s) => (
+                  <a
+                    key={s.id}
+                    href={`#${s.id}`}
+                    className="group flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-bold text-pink-700/70 transition-all duration-300 hover:bg-pink-50 hover:text-pink-600"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pink-50 text-[11px] font-black text-pink-500 group-hover:bg-pink-100">
+                      {s.num}
+                    </span>
+                    <span className="truncate">{s.title}</span>
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          <div>
+            <div className="mb-6 rounded-[1.8rem] border border-pink-100 bg-white/75 p-4 shadow-lg shadow-pink-100/40 backdrop-blur-xl lg:hidden">
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.26em] text-pink-400">មាតិកា</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {sections.map((s) => (
+                  <a key={s.id} href={`#${s.id}`} className="rounded-2xl bg-pink-50/75 px-3 py-2 text-sm font-bold text-pink-700 transition-colors hover:bg-pink-100">
+                    {s.num}. {s.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {sections.map((s, index) => (
+                <article
+                  key={s.id}
+                  id={s.id}
+                  className="group scroll-mt-28 overflow-hidden rounded-[1.7rem] border border-pink-100 bg-white/82 shadow-lg shadow-pink-100/45 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-200/45"
+                >
+                  <div className="h-1.5 bg-gradient-to-r from-pink-400 via-fuchsia-400 to-rose-300" />
+                  <div className="p-5 sm:p-6">
+                    <div className="mb-4 flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-fuchsia-500 text-sm font-black text-white shadow-lg shadow-pink-300/45">
+                        {s.num}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-pink-400">Section {index + 1}</p>
+                        <h2 className="mt-1 font-display text-xl font-black text-pink-950 sm:text-2xl">{s.title}</h2>
+                      </div>
+                    </div>
+                    <div className="privacy-content text-[15px] font-medium leading-8 text-pink-800/78">
+                      {s.content}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-10 rounded-[2rem] border border-pink-100 bg-gradient-to-br from-white via-pink-50 to-white p-6 text-center shadow-xl shadow-pink-100/60">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-pink-400">Developer</p>
+              <a
+                href="https://sop-khal.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-fuchsia-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-pink-300/40 transition-all duration-300 hover:-translate-y-0.5"
+              >
+                Visit Sokphal Portfolio ↗
+              </a>
+            </div>
+
+            <div className="mt-8 text-center">
+              <a
+                href="#"
+                className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-black text-pink-600 shadow-sm shadow-pink-100 transition-all duration-300 hover:-translate-y-0.5 hover:bg-pink-50"
+              >
+                ↑ ត្រឡប់ទៅខាងលើ
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </>

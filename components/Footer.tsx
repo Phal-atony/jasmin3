@@ -10,11 +10,11 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5 mb-3">
               <Image
-                src="https://i.ibb.co/cKr3gptJ/jasmintopup-logo-no-bg-transparent.png"
+                src="/jasmintopup-logo.png"
                 alt="Logo"
                 width={40}
                 height={40}
-                className="h-10 w-10 rounded-xl object-cover"
+                className="h-10 w-10 rounded-xl object-contain"
               />
               <span className="font-display text-lg font-extrabold text-pink-800">JASMIN<span className="text-pink-500">TOPUP</span></span>
             </div>
@@ -64,14 +64,17 @@ export default function Footer() {
         </div>
         <div className="mt-8 pt-6 border-t-2 border-pink-100 flex flex-col items-center gap-3">
   <p className="text-[11px] font-bold text-pink-500 uppercase tracking-wider">ទូទាត់តាមរយៈ</p>
-  <Image
-    src="https://i.ibb.co/ccg3qyF9/images.png"
-    alt="KHQR"
-    width={64}
-    height={32}
-    className="h-8 w-16 rounded-lg object-contain"
-  />
-  <p className="text-[11px] text-pink-400 font-semibold">Developed by Sokphal</p>
+  <span className="flex h-9 w-16 items-center justify-center rounded-lg bg-red-600 text-[11px] font-black tracking-wide text-white shadow-sm shadow-red-200">
+    KHQR
+  </span>
+  <a
+    href="https://sop-khal.vercel.app"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[11px] font-bold text-pink-500 transition-all hover:-translate-y-0.5 hover:text-pink-700 hover:underline"
+  >
+    Developed by Sokphal
+  </a>
 <Link href="/privacy-policy" className="text-[11px] text-pink-500 font-semibold hover:text-pink-700 hover:underline transition-colors">
   Terms &amp; Policy
 </Link>

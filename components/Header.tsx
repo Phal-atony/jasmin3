@@ -270,38 +270,22 @@ export default function Header() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`mobile-drawer-nav-item mobile-drawer-fade group flex items-center justify-between overflow-hidden rounded-[1.35rem] border px-3.5 py-3 ${
-                    active
-                      ? "border-pink-300/80 bg-gradient-to-r from-pink-500 via-fuchsia-500 to-pink-500 text-white shadow-[0_16px_32px_rgba(236,72,153,0.24)]"
-                      : "border-pink-100/90 bg-white/82 text-pink-800 shadow-[0_10px_24px_rgba(244,114,182,0.08)] backdrop-blur-md"
-                  }`}
+                  className={`mobile-drawer-nav-item mobile-drawer-fade group flex items-center justify-between overflow-hidden rounded-[1.35rem] border border-pink-300/80 bg-gradient-to-r from-pink-500 via-fuchsia-500 to-pink-500 px-3.5 py-3 text-white shadow-[0_16px_32px_rgba(236,72,153,0.24)] ${active ? "ring-2 ring-white/70" : ""}`}
                   style={{ transitionDelay: mobileOpen ? `${70 + index * 40}ms` : "0ms" }}
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[1rem] border transition-all duration-500 ${
-                        active
-                          ? "border-white/15 bg-white/16 text-white"
-                          : "border-pink-100 bg-gradient-to-br from-pink-50 to-white text-pink-500 group-hover:border-pink-200 group-hover:text-pink-600"
-                      }`}
-                    >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[1rem] border border-white/15 bg-white/16 text-white shadow-inner shadow-white/10 transition-all duration-500 group-hover:scale-105 group-hover:bg-white/22">
                       {item.icon}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-[14px] font-black tracking-tight">{item.label}</span>
-                      <span className={`mt-0.5 block text-[10px] font-semibold ${active ? "text-white/80" : "text-pink-400"}`}>
+                      <span className="mt-0.5 block text-[10px] font-semibold text-white/80">
                         {item.helper}
                       </span>
                     </span>
                   </span>
 
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-500 ${
-                      active
-                        ? "bg-white/16 text-white"
-                        : "bg-pink-50 text-pink-300 group-hover:translate-x-0.5 group-hover:bg-pink-100 group-hover:text-pink-500"
-                    }`}
-                  >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/16 text-white transition-all duration-500 group-hover:translate-x-0.5 group-hover:bg-white/24">
                     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h13" />
                       <path d="m12 5 7 7-7 7" />
@@ -312,36 +296,54 @@ export default function Header() {
             })}
           </nav>
 
-          <div className="mt-3 mobile-drawer-fade rounded-[1.35rem] border border-pink-100/90 bg-white/78 p-3 shadow-[0_10px_24px_rgba(244,114,182,0.08)] backdrop-blur-md">
+          <div className="mt-3 mobile-drawer-fade rounded-[1.35rem] border border-pink-100/90 bg-white/80 p-3 shadow-[0_10px_24px_rgba(244,114,182,0.08)] backdrop-blur-md">
             <div className="flex items-center justify-between gap-2.5">
               <div className="min-w-0">
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-pink-400">Quick</p>
-                <p className="mt-1 text-[12px] font-bold leading-relaxed text-pink-900">ចូល Track Order ឬ Games បានលឿន</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-pink-400">Helper</p>
+                <p className="mt-1 text-[12px] font-bold leading-relaxed text-pink-900">ត្រូវការជំនួយ? ទាក់ទងយើងបានរហ័ស</p>
               </div>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br from-pink-100 to-white text-pink-500 shadow-inner shadow-white">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3v18" />
-                  <path d="M5 10h14" />
+                  <path d="M21 5 3 12.5l7 2.2L12.5 21 21 5Z" />
+                  <path d="m10 14.7 5.5-5.2" />
                 </svg>
               </span>
             </div>
+
             <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-              <Link
-                href="/#games"
+              <a
+                href="https://t.me/JASMINTOPUP"
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-[1rem] border border-pink-100 bg-gradient-to-br from-pink-50 via-white to-white px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-pink-200 hover:shadow-md hover:shadow-pink-100/80 active:scale-[0.99]"
+                className="group rounded-[1rem] border border-pink-100 bg-gradient-to-br from-pink-50 via-white to-white px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-pink-200 hover:shadow-md hover:shadow-pink-100/80 active:scale-[0.99]"
               >
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-pink-400">Games</span>
-                <span className="mt-1.5 block text-[12px] font-black text-pink-800">ទៅកាន់ហ្គេម</span>
-              </Link>
-              <Link
-                href="/order"
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-white text-sky-500 shadow-inner shadow-white">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 5 3 12.4l6.7 2.1L12 20l3.1-4.1L21 5Z" />
+                    <path d="m9.7 14.5 5.8-5.1" />
+                  </svg>
+                </span>
+                <span className="mt-2 block text-[12px] font-black text-pink-800">Telegram</span>
+                <span className="mt-0.5 block truncate text-[10px] font-bold text-pink-400">@JASMINTOPUP</span>
+              </a>
+
+              <a
+                href="https://www.tiktok.com/@jasmintopup03"
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-[1rem] border border-pink-100 bg-gradient-to-br from-pink-50 via-white to-white px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-pink-200 hover:shadow-md hover:shadow-pink-100/80 active:scale-[0.99]"
+                className="group rounded-[1rem] border border-pink-100 bg-gradient-to-br from-pink-50 via-white to-white px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-pink-200 hover:shadow-md hover:shadow-pink-100/80 active:scale-[0.99]"
               >
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-pink-400">Order</span>
-                <span className="mt-1.5 block text-[12px] font-black text-pink-800">Track Order</span>
-              </Link>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-pink-100 to-white text-pink-600 shadow-inner shadow-white">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 4v10.2a4.2 4.2 0 1 1-4.2-4.2" />
+                    <path d="M14 4c1.1 2.8 3 4.4 6 4.7" />
+                  </svg>
+                </span>
+                <span className="mt-2 block text-[12px] font-black text-pink-800">TikTok</span>
+                <span className="mt-0.5 block truncate text-[10px] font-bold text-pink-400">@jasmintopup03</span>
+              </a>
             </div>
           </div>
 

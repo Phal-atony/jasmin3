@@ -817,3 +817,39 @@ body {
     filter: none !important;
   }
 }
+
+/* Privacy policy premium page */
+.privacy-content a {
+  color: #db2777;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.privacy-content a:hover {
+  text-decoration: underline;
+}
+
+.privacy-content ul {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.privacy-content li {
+  list-style-position: inside;
+}
+
+.privacy-content table {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(251, 207, 232, 0.85);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.privacy-content th {
+  background: linear-gradient(135deg, rgba(252, 231, 243, 0.95), rgba(255, 241, 247, 0.95));
+}
+
+.privacy-content tr:hover td {
+  background: rgba(253, 242, 248, 0.8);
+}
