@@ -346,22 +346,6 @@ export default function Header() {
               </a>
             </div>
           </div>
-
-          <div className="mt-auto pt-3">
-            <Link
-              href="/order"
-              onClick={() => setMobileOpen(false)}
-              className="mobile-drawer-cta mobile-drawer-fade group flex items-center justify-center gap-2.5 rounded-[1.3rem] px-4 py-3 text-[13px] font-black text-white"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/18 shadow-inner shadow-white/10">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="6.5" />
-                  <path d="m20 20-3.2-3.2" />
-                </svg>
-              </span>
-              <span className="text-center leading-tight">តាមដានការបញ្ជាទិញ</span>
-            </Link>
-          </div>
         </div>
       </aside>
     </>
