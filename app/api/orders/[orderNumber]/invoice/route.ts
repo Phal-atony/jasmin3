@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
+import { applyRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/getIp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -317,8 +319,23 @@ export async function GET(
   { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   const { orderNumber } = await params;
+  const normalizedOrderNumber = orderNumber.trim().toUpperCase();
+  const ip = getClientIp(req);
+
+  const rl = await applyRateLimit(
+    `invoice:${normalizedOrderNumber}:${ip}`,
+    20,
+    10 * 60 * 1000,
+    ip
+  );
+  if (rl) return rl;
+
+  if (!/^[A-Z0-9-]{3,40}$/.test(normalizedOrderNumber)) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
   const order = await prisma.order.findUnique({
-    where: { orderNumber: orderNumber.toUpperCase() },
+    where: { orderNumber: normalizedOrderNumber },
     include: {
       game:    { select: { name: true, publisher: true, currencyName: true } },
       product: { select: { name: true, amount: true, bonus: true, priceUsd: true } },

@@ -1,12 +1,28 @@
-﻿import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { NextRequest } from "next/server";
+import {
+  API_CACHE_SHORT,
+  publicRateLimit,
+  rejectSuspiciousQuery,
+  safeJson,
+} from "@/lib/apiSecurity";
+
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
+export async function GET(req: NextRequest) {
+  const suspicious = rejectSuspiciousQuery(req);
+  if (suspicious) return suspicious;
 
-export async function GET() {
+  const limited = publicRateLimit(req, "api-faqs", {
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const faqs = await prisma.faq.findMany({
     where: { active: true },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
   });
-  return NextResponse.json(faqs);
+
+  return safeJson(faqs, undefined, API_CACHE_SHORT);
 }

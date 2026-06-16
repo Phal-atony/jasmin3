@@ -2,13 +2,14 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 import { logSecurityEvent } from "@/lib/secureLogger"; 
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { fetchKhpayStatus } from "@/lib/payment";
 import {
   isRemotePaid,
   logPaymentValidationFailure,
   validatePaymentForOrder,
 } from "@/lib/payment-validation";
+import { publicRateLimit, safeJson } from "@/lib/apiSecurity";
 
 /**
  * Public order lookup.
@@ -36,12 +37,24 @@ function maskPhone(phone: string | null | undefined): string | null {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   const { orderNumber } = await params;
+  const normalizedOrderNumber = orderNumber.trim().toUpperCase();
+
+  const limited = publicRateLimit(req, `api-order-detail:${normalizedOrderNumber}`, {
+    limit: 180,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
+  if (!/^[A-Z0-9-]{3,40}$/.test(normalizedOrderNumber)) {
+    return safeJson({ error: "Order not found" }, { status: 404 });
+  }
+
   let order = await prisma.order.findUnique({
-    where: { orderNumber: orderNumber.toUpperCase() },
+    where: { orderNumber: normalizedOrderNumber },
     include: {
       game:    { select: { name: true, slug: true } },
       product: { select: { name: true } },
@@ -49,7 +62,7 @@ export async function GET(
   });
 
   if (!order) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    return safeJson({ error: "Order not found" }, { status: 404 });
   }
 
   // Public order lookup is read-only in production.
@@ -115,7 +128,7 @@ export async function GET(
   const qrString   = canPay ? order.qrString   : null;
   const paymentUrl = canPay ? order.paymentUrl  : null;
 
-  return NextResponse.json({
+  return safeJson({
     // ── Core fields ────────────────────────────────────────────────────────
     orderNumber:   order.orderNumber,
     status:        order.status,

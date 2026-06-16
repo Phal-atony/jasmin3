@@ -11,6 +11,7 @@ import {
   validatePaymentForOrder,
 } from "@/lib/payment-validation";
 import { notifyAndMaybeDeliverPaidOrder } from "@/lib/order-fulfillment";
+import { publicRateLimit } from "@/lib/apiSecurity";
 
 function getPayloadData(payload: any): any {
   return payload?.data && typeof payload.data === "object" ? payload.data : payload;
@@ -141,6 +142,12 @@ export async function POST(
     if (method !== "KHPAY") {
       return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
     }
+
+    const limited = publicRateLimit(req, `payment-webhook:${method}`, {
+      limit: 120,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
 
     const rawBody = await req.text();
     const headers: Record<string, string> = {};

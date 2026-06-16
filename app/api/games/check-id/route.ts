@@ -1,11 +1,12 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { getGameLookupConfig, lookupAidenGameNickname } from "@/lib/aidenGameLookup";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import { z } from "zod";
-
-const CHECK_ID_RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const CHECK_ID_RATE_LIMIT_MAX = 5; // 5 checks per minute per IP
+const CHECK_ID_RATE_LIMIT_WINDOW_MS = 60_000;
+const CHECK_ID_RATE_LIMIT_MAX = 5;
 
 type RateLimitRecord = {
   count: number;
@@ -63,48 +64,10 @@ function checkIdRateLimit(ip: string) {
 }
 
 const schema = z.object({
-  slug: z.enum([
-    "mobile-legends",
-    "honor-of-kings",
-    "free-fire",
-    "pubg-mobile",
-    "ro-blox",
-  ]),
+  slug: z.string().trim().min(1).max(60),
   uid: z.string().trim().min(1).max(30),
-  serverId: z.string().trim().max(10).optional(),
+  serverId: z.string().trim().max(20).optional(),
 });
-
-function getRapidApiKey(): string {
-  const key = process.env.RAPIDAPI_KEY;
-  if (!key) throw new Error("RAPIDAPI_KEY is not set");
-  return key;
-}
-
-const RAPIDAPI_HOST = "id-game-checker.p.rapidapi.com";
-const BASE = `https://${RAPIDAPI_HOST}`;
-
-function buildUrl(slug: string, uid: string, serverId?: string): string | null {
-  switch (slug) {
-    case "free-fire":
-      return `${BASE}/dfm-garena/${encodeURIComponent(uid)}`;
-
-    case "mobile-legends":
-      if (!serverId) return null;
-      return `${BASE}/mobile-legends/${encodeURIComponent(uid)}/${encodeURIComponent(serverId)}`;
-
-    case "pubg-mobile":
-      return `${BASE}/pubgm-global/${encodeURIComponent(uid)}`;
-
-    case "honor-of-kings":
-      return `${BASE}/honor-of-kings/${encodeURIComponent(uid)}`;
-
-    case "ro-blox":
-      return `${BASE}/roblox/${encodeURIComponent(uid)}`;
-
-    default:
-      return null;
-  }
-}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -124,7 +87,7 @@ export async function POST(req: NextRequest) {
           "X-RateLimit-Limit": String(CHECK_ID_RATE_LIMIT_MAX),
           "X-RateLimit-Remaining": "0",
         },
-      }
+      },
     );
   }
 
@@ -143,7 +106,7 @@ export async function POST(req: NextRequest) {
       {
         status: 400,
         headers: rateLimitHeaders,
-      }
+      },
     );
   }
 
@@ -158,28 +121,14 @@ export async function POST(req: NextRequest) {
       {
         status: 400,
         headers: rateLimitHeaders,
-      }
+      },
     );
   }
 
   const { slug, uid, serverId } = parsed.data;
+  const cfg = getGameLookupConfig(slug);
 
-  if (slug === "mobile-legends" && !serverId) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Zone ID is required for Mobile Legends",
-      },
-      {
-        status: 400,
-        headers: rateLimitHeaders,
-      }
-    );
-  }
-
-  const url = buildUrl(slug, uid, serverId);
-
-  if (!url) {
+  if (!cfg) {
     return NextResponse.json(
       {
         success: false,
@@ -188,104 +137,51 @@ export async function POST(req: NextRequest) {
       {
         status: 400,
         headers: rateLimitHeaders,
-      }
+      },
     );
   }
 
-  let rapidApiKey: string;
-
-  try {
-    rapidApiKey = getRapidApiKey();
-  } catch {
+  if (cfg.needsZone && !serverId?.trim()) {
     return NextResponse.json(
       {
         success: false,
-        error: "Service unavailable",
+        error: "Zone ID is required",
       },
       {
-        status: 503,
+        status: 400,
         headers: rateLimitHeaders,
-      }
+      },
     );
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const nickname = await lookupAidenGameNickname(
+    slug,
+    uid.trim(),
+    cfg.needsZone ? serverId?.trim() : undefined,
+  );
 
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-rapidapi-host": RAPIDAPI_HOST,
-        "x-rapidapi-key": rapidApiKey,
-      },
-      cache: "no-store",
-      signal: controller.signal,
-    });
-
-    const data: unknown = await res.json().catch(() => null);
-
-    if (!res.ok || !data || typeof data !== "object") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Player not found — check your ID",
-        },
-        {
-          status: res.status === 404 ? 404 : 502,
-          headers: rateLimitHeaders,
-        }
-      );
-    }
-
-    const d = data as Record<string, unknown>;
-
-    const nickname =
-      (typeof d.nickname === "string" && d.nickname) ||
-      (typeof d.name === "string" && d.name) ||
-      (typeof d.username === "string" && d.username) ||
-      (typeof d.playerName === "string" && d.playerName) ||
-      null;
-
-    if (!nickname) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Player not found — check your ID",
-        },
-        {
-          status: 404,
-          headers: rateLimitHeaders,
-        }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        name: nickname,
-        uid,
-        serverId: serverId ?? null,
-      },
-      {
-        headers: rateLimitHeaders,
-      }
-    );
-  } catch (err) {
-    const aborted = err instanceof Error && err.name === "AbortError";
-
+  if (!nickname) {
     return NextResponse.json(
       {
         success: false,
-        error: aborted ? "Lookup timed out" : "Network error",
+        error: "Player not found — check your ID",
       },
       {
-        status: 504,
+        status: 404,
         headers: rateLimitHeaders,
-      }
+      },
     );
-  } finally {
-    clearTimeout(timeout);
   }
+
+  return NextResponse.json(
+    {
+      success: true,
+      name: nickname,
+      uid,
+      serverId: serverId ?? null,
+    },
+    {
+      headers: rateLimitHeaders,
+    },
+  );
 }

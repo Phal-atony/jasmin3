@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { initiatePayment } from "@/lib/payment";
+import { applyRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/getIp";
+import { safeJson } from "@/lib/apiSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +12,24 @@ export async function POST(
   { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   const { orderNumber } = await params;
+  const normalizedOrderNumber = orderNumber.trim().toUpperCase();
+  const ip = getClientIp(req);
+
+  const rl = await applyRateLimit(
+    `refresh-payment:${normalizedOrderNumber}:${ip}`,
+    5,
+    10 * 60 * 1000,
+    ip
+  );
+  if (rl) return rl;
+
+  if (!/^[A-Z0-9-]{3,40}$/.test(normalizedOrderNumber)) {
+    return safeJson({ error: "Order not found" }, { status: 404 });
+  }
 
   const order = await prisma.order.findUnique({
     where: {
-      orderNumber: orderNumber.toUpperCase(),
+      orderNumber: normalizedOrderNumber,
     },
     include: {
       game: { select: { name: true, slug: true } },
@@ -21,11 +38,11 @@ export async function POST(
   });
 
   if (!order) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    return safeJson({ error: "Order not found" }, { status: 404 });
   }
 
   if (order.status !== "PENDING") {
-    return NextResponse.json(
+    return safeJson(
       { error: "This order cannot refresh payment QR" },
       { status: 409 }
     );
@@ -66,7 +83,7 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({
+  return safeJson({
     orderNumber: updated.orderNumber,
     status: updated.status,
     playerUid: updated.playerUid,

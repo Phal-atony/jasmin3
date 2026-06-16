@@ -8,9 +8,9 @@ import { QrCode, ArrowRight, Lock, Check, Smartphone, Search, UserRoundCheck, Al
 import KHQRBottomSheet from "@/components/KHQRBottomSheet";
 
 // Games that support automatic nickname lookup via /api/lookup-uid
-const LOOKUP_SLUGS = new Set(["mobile-legends", "free-fire", "honor-of-king", "pubg-mobile", "ro-blox"]);
+const LOOKUP_SLUGS = new Set(["mobile-legends", "free-fire", "honor-of-king", "honor-of-kings", "pubg-mobile", "pubgm", "pubgm-lite", "blood-strike", "magic-chess", "magic-chess-go", "mcgg", "ro-blox"]);
 // MLBB & similar games that use a separate "Zone ID" instead of a server dropdown
-const ZONE_ID_SLUGS = new Set(["mobile-legends", "honor-of-king"]);
+const ZONE_ID_SLUGS = new Set(["mobile-legends", "magic-chess", "magic-chess-go", "mcgg"]);
 
 const DISMISS_KEY = "topup_bar_dismissed";
 

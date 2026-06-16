@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { publicRateLimit } from "@/lib/apiSecurity";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,6 +11,12 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const limited = publicRateLimit(req, "api-home-turnstile", {
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
 
